@@ -274,6 +274,7 @@ function mostUsedTags($limit = null)
 	$request = $db->query('', '
 		SELECT id_term, tag_text, times_used
 		FROM {db_prefix}tag_terms
+		WHERE times_used > 0
 		ORDER BY times_used DESC
 		LIMIT {int:maximum}',
 		array(
