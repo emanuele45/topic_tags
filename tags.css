@@ -1,0 +1,106 @@
+#show_tags.tags_hidden {
+	display: none;
+}
+
+#tagsupshrink {
+	float: right;
+	margin: 0;
+	padding: 4px 4px 0 4px;
+}
+
+.post_header, .postbox {
+	padding: 6px;
+	overflow: hidden;
+}
+.post_header dt, .postbox dt {
+	float: left;
+	padding: 0;
+	width: 15%;
+	margin: 6px 0 0 0;
+	font-weight: bold;
+}
+.post_header dd, .postbox dd {
+	float: left;
+	padding: 0;
+	width: 83%;
+	margin: 4px 0;
+}
+.post_header img {
+	vertical-align: middle;
+}
+
+#show_tags {
+	position: relative;
+	display: inline-block;
+	text-align: center;
+	width: 100%;
+	padding-left: 15%;
+	padding-right: 15%;
+}
+#show_tags .tag_delete {
+	display: inline-block;
+	padding: 14px 8px 8px 8px;
+	margin-left: -16px;
+	background: url(../images/icons/delete.png) center center no-repeat;
+}
+#show_tags .tag_add {
+	float: left;
+	position: absolute;
+	top: 0;
+	left: 0;
+	padding: 14px 8px 8px 8px;
+	background: url(../images/admin/regcenter.png) center center no-repeat;
+}
+#show_tags.tags_ajax_form_min {
+	min-height: 5em;
+}
+#show_tags .tags_ajax_form {
+	position: absolute;
+	top: 0.5em;
+	left: 1em;
+}
+
+#show_tags .atag {
+	margin: 0.2em 0.9em 0.2em 0.2em;
+	padding: 0.1em;
+	border: 1px solid #bbb;
+	vertical-align: middle;
+	border-radius: 3px;
+	box-shadow: 0 2px 5px rgba(0,0,0,0.05) inset;
+	white-space:nowrap;
+	display: inline-block;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	max-width: 10em;
+}
+
+.tagsize1 {
+	font-size: 70%;
+}
+.tagsize2 {
+	font-size: 80%;
+}
+.tagsize3 {
+	font-size: 90%;
+}
+.tagsize4 {
+	font-size: 100%;
+}
+.tagsize5, .tagsize0 {
+	font-size: 115%;
+}
+.tagsize6 {
+	font-size: 130%;
+}
+.tagsize7 {
+	font-size: 155%;
+}
+.tagsize8 {
+	font-size: 170%;
+}
+.tagsize9 {
+	font-size: 185%;
+}
+.tagsize10 {
+	font-size: 200%;
+}

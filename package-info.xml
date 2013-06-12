@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!DOCTYPE package-info SYSTEM "http://www.simplemachines.org/xml/package-info">
+<package-info xmlns="http://www.simplemachines.org/xml/package-info" xmlns:smf="http://www.simplemachines.org/">
+	<license><![CDATA[
+/**
+ * Topics Tags
+ *
+ * @author emanuele
+ * @license   BSD http://opensource.org/licenses/BSD-3-Clause
+ *
+ * @version 0.0.1
+ */
+	]]></license>
+	<id>emanuele:topics_tags</id>
+	<name>Topics Tags</name>
+	<version>0.0.1</version>
+	<type>modification</type>
+	<install for="1.0 - 1.0.99">
+		<require-file name="Tags.controller.php" destination="CONTROLLERDIR" />
+		<require-file name="Tags.subs.php" destination="SUBSDIR" />
+		<require-file name="Tags.template.php" destination="$themedir" />
+		<require-file name="Tags.english.php" destination="$languagedir" />
+		<require-file name="tags.css" destination="$themedir/css" />
+		<require-file name="tags.js" destination="$themedir/script" />
+		<hook hook="integrate_mark_read_button" file="SOURCEDIR/subs/TabularCategories.subs.php" function="tabular_categories" />
+	</install>
+	<uninstall for="1.0 - 1.0.99">
+		<remove-file name="CONTROLLERDIR/Tags.controller.php" />
+		<remove-file name="SUBSDIR/Tags.subs.php" />
+		<remove-file name="$themedir/Tags.template.php" />
+		<remove-file name="$languagedir/Tags.english.php" />
+		<remove-file name="$themedir/css/tags.css" />
+		<remove-file name="$themedir/script/tags.js" />
+		<hook reverse="true" hook="integrate_mark_read_button" file="SOURCEDIR/subs/TabularCategories.subs.php" function="tabular_categories" />
+	</uninstall>
+</package-info>
