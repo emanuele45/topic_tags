@@ -19,34 +19,15 @@ function post_page_tags()
 		loadJavaScriptFile('suggest.js');
 
 		$context['current_tags'] = topicTags($topic, true);
-		$tags_array = '
-		var current_tags = new Array( ';
-		$tags_obj = '
-		var listItems = [ ';
 		if (!empty($context['current_tags']))
 		{
+			addJavascriptVar('current_tags', 'var current_tags = new Array(' . implode(', ', $context['current_tags']) . ');', true);
 			addJavascriptVar('want_to_restore_tags', $txt['want_to_restore_tags'], true);
 			addJavascriptVar('tags_will_be_deleted', $txt['tags_will_be_deleted'], true);
 
-			foreach ($context['current_tags'] as $id => $val)
-			{
-				$eval = JavaScriptEscape($val);
-				$tags_array .= $eval . ',';
-				$tags_obj .= '
-					{
-						sItemId: ' . $id . ',
-						sItemName: ' . $eval . '
-					},';
-			}
 		}
 
-		$tags_array = substr($tags_array, 0, -1) . ');';
-		$tags_obj = substr($tags_obj, 0, -1) . '];';
 		addJavascriptVar('autosuggest_delete_item', $txt['autosuggest_delete_item'], true);
-		addInlineJavascript('
-			' . $tags_obj . '
-			' . $tags_array . '
-			init_tags_autoSuggest(listItems);', true);
 	}
 }
 
@@ -111,17 +92,14 @@ function posting_tags($msgOptions, $topicOptions, $posterOptions)
 		return;
 
 	// Since this is only for new topics I can just check that
-	if (!empty($_POST['tags']) || isset($_POST['tags_input_name']))
+	if (!empty($_POST['tags']))
 	{
 		$possible_tags = cleanPostedTags();
-		$auto_suggest = cleanAutoSuggest();
 
 		// Do any of them already exist? (And grab all the ids at the same time)
 		$tag_ids = createTags($possible_tags);
-		$tag_ids = array_unique(array_merge($tag_ids, $auto_suggest));
 
-		if (!empty($tag_ids))
-			addTags($topicOptions['id'], $tag_ids);
+		addTags($topicOptions['id'], $tag_ids);
 	}
 }
 
@@ -135,26 +113,22 @@ function editing_tags($messages_columns, $update_parameters, $msgOptions, $topic
 	// I want to have tags set only for the entire topic (and for now, attached only to the first msg)
 	require_once(SUBSDIR . '/Messages.subs.php');
 	$topic_info = basicMessageInfo($msgOptions['id'], false, true);
-
 	if (!$topic_info['id_first_msg'])
 		return;
 
 	$possible_tags = cleanPostedTags();
-	$auto_suggest = cleanAutoSuggest();
 
 	// Remove goes before the empty check because if you have cleaned up the
 	// input you want to remove everything
 	removeTagsFromTopic($topicOptions['id']);
 
-	$tag_ids = array();
+	if (empty($possible_tags))
+		return;
 
 	// Usual: do they exist? If so, ids please!
-	if (!empty($possible_tags))
-		$tag_ids = createTags($possible_tags);
-	$tag_ids = array_unique(array_merge($tag_ids, $auto_suggest));
+	$tag_ids = createTags($possible_tags);
 
-	if (!empty($tag_ids))
-		addTags($topicOptions['id'], $tag_ids);
+	addTags($topicOptions['id'], $tag_ids);
 }
 
 function add_routine_tags_recount()
@@ -229,17 +203,10 @@ function prepareXmlTags($tags, $topic_id = false)
 
 function cleanPostedTags()
 {
-	// This is to take care of the beloved autoSuggest
-	if (isset($_POST['tags_input_name']) && !empty($_POST[$_POST['tags_input_name']]))
-	{
-		$possible_tags = explode(',', $_POST[$_POST['tags_input_name']]);
-	}
-	// AutoSuggest not working and no tags?
-	elseif (!empty($_POST['tags']))
-		$possible_tags = explode(',', $_POST['tags']);
-
-	if (empty($possible_tags))
+	if (empty($_POST['tags']))
 		return array();
+
+	$possible_tags = explode(',', $_POST['tags']);
 
 	// a bit of cleanup
 	foreach ($possible_tags as &$tag)
@@ -247,16 +214,6 @@ function cleanPostedTags()
 	$possible_tags = array_unique($possible_tags);
 
 	return $possible_tags;
-}
-
-function cleanAutoSuggest()
-{
-	$clean = array();
-
-	if (!empty($_POST['tags_autosuggest']))
-		$clean = array_map('intval', $_POST['tags_autosuggest']);
-
-	return $clean;
 }
 
 function topicTags($topic_id, $only_tags = false)
