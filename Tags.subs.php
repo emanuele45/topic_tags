@@ -11,7 +11,7 @@ function post_page_tags()
 		return;
 
 	// Give the box only for new topics or when editing the first message
-	if (empty($topic) || $context['is_first_post'])
+	if (empty($modSettings['hashtag_mode']) && (empty($topic) || $context['is_first_post']))
 	{
 		Template_Layers::getInstance()->addAfter('tags_posting', 'postarea');
 		init_tags_template();
@@ -46,20 +46,25 @@ function boardindex_tag_cloud()
 
 function topic_tag_cloud($topic_selects, $topic_tables, $topic_parameters)
 {
-	global $topic, $modSettings;
+	global $topic, $modSettings, $context;
 
 	if (empty($modSettings['tags_enabled']))
 		return;
 
-	init_tags_template();
+	init_tags_template(!empty($modSettings['hashtag_mode']));
 	Template_Layers::getInstance()->addBefore('topic_tag_cloud', 'pages_and_buttons');
 
-	styleTags(topicTags($topic), $topic);
+	$context['tags_list'] = topicTags($topic);
+	styleTags($context['tags_list'], $topic);
 }
 
 function add_tags_permissions(&$permissionGroups, &$permissionList, &$leftPermissionGroups, &$hiddenPermissions, &$relabelPermissions)
 {
-	global $modSettings;
+	global $modSettings, $modSettings;
+
+	// In hashtag mode permissions are irrelevant
+	if (!empty($modSettings['hashtag_mode']))
+		return;
 
 	loadLanguage('Tags');
 
@@ -71,7 +76,11 @@ function add_tags_permissions(&$permissionGroups, &$permissionList, &$leftPermis
 
 function add_tags_illegal_permissions()
 {
-	global $context;
+	global $context, $modSettings;
+
+	// In hashtag mode permissions are irrelevant
+	if (!empty($modSettings['hashtag_mode']))
+		return;
 
 	loadLanguage('Tags');
 
@@ -81,6 +90,9 @@ function add_tags_illegal_permissions()
 function posting_tags($msgOptions, $topicOptions, $posterOptions)
 {
 	global $context, $modSettings;
+
+	if (!empty($modSettings['hashtag_mode']))
+		return posting_hashed_tags($msgOptions, $topicOptions, $posterOptions, array(), array());
 
 	if (empty($modSettings['tags_enabled']) || !tagsAllowed(true))
 		return;
@@ -101,6 +113,61 @@ function posting_tags($msgOptions, $topicOptions, $posterOptions)
 
 		addTags($topicOptions['id'], $tag_ids);
 	}
+}
+
+function posting_hashed_tags($msgOptions, $topicOptions, $posterOptions, $message_columns, $message_parameters)
+{
+	global $modSettings;
+
+	if (empty($modSettings['tags_enabled']) || empty($modSettings['hashtag_mode']) || empty($topicOptions['id']))
+		return;
+
+	$possible_tags = cleanHashedTags($msgOptions['body']);
+
+	// Do any of them already exist? (And grab all the ids at the same time)
+	$tag_ids = createTags($possible_tags);
+
+	addTags($topicOptions['id'], $tag_ids);
+}
+
+function editing_hashed_tags($messages_columns, $update_parameters, $msgOptions, $topicOptions, $posterOptions, $messageInts)
+{
+	global $modSettings;
+
+	if (empty($modSettings['tags_enabled']) || empty($modSettings['hashtag_mode']))
+		return;
+
+	$possible_tags = cleanHashedTags($msgOptions['body']);
+
+	$tag_ids = createTags($possible_tags);
+
+	addTags($topicOptions['id'], $tag_ids);
+
+	purgeTopicTags($topicOptions['id']);
+}
+
+function cleanHashedTags($message)
+{
+	// @todo the regexp is kinda crappy, I have to find a better one...
+	// testing string:
+	// #asd #222 #a.dsa #as1.dd  #asd2#das #asd3 #asd4 #ads5
+	// expected returns:
+	//  asd
+	//  222
+	//  as1
+	//  asd2
+	//  asd3
+	//  asd4
+	//  asd5
+	preg_match_all('~([\s^]#(\w{2,}[^\s])|[\s^]#(\w{2,}[^\w]))~', ' ' . str_replace('<br />', ' ', $message), $matches);
+
+	if (!empty($matches[2]))
+	{
+		$return = preg_replace('~[^\w]$~', '', $matches[2]);
+		return array_unique($return);
+	}
+	else
+		return array();
 }
 
 function editing_tags($messages_columns, $update_parameters, $msgOptions, $topicOptions, $posterOptions, $messageInts)
@@ -156,6 +223,30 @@ function add_tags_maintenance_activity(&$subActions)
 	$subActions['routine']['activities']['recounttags'] = 'recountTags';
 }
 
+function prepare_display_hashed_tags(&$output, &$message)
+{
+	global $modSettings, $context, $topic, $scripturl;
+
+	if (empty($modSettings['tags_enabled']) || empty($modSettings['hashtag_mode']))
+		return;
+
+	if (empty($context['current_tags']))
+		return;
+
+	$find = array();
+	$replace = array();
+	foreach ($context['tags_list']['tags'] as $tag)
+		$find[] = '~(\s|<br />|^)#(' . preg_quote($tag['tag_text']) . ')(\s|<br />|$)~';
+
+	$output['body'] = preg_replace_callback($find, create_function('$match', '
+		global $context, $topic, $scripturl;
+		if (!empty($match[2]) && isset($context[\'tags_list\'][\'tags\'][$match[2]]))
+		{
+			$tag = $context[\'tags_list\'][\'tags\'][$match[2]];
+			return $match[1] . \'<a data-topic="\' . $topic . \'" id="tag_\' . $tag[\'id_term\'] . \'" class="msg_tagsize\' . round(10 * $tag[\'times_used\'] / $context[\'tags_list\'][\'max_used\']) . \'" href="\' . $scripturl . \'?action=tags;tag=\' . $tag[\'id_term\'] . \'.0">#\' . $tag[\'tag_text\'] . \'</a>\' . $match[3];
+		}'), $output['body']);
+}
+
 /*********************************************************
  * End of Hooks functions
  *********************************************************/
@@ -163,14 +254,19 @@ function add_tags_maintenance_activity(&$subActions)
 /*********************************************************
  * Real subs
  *********************************************************/
-function init_tags_template()
+function init_tags_template($minimal = false)
 {
 	global $txt, $topic;
 
 	loadCSSFile('tags.css');
-	loadJavaScriptFile('tags.js');
 	loadLanguage('Tags');
 	loadTemplate('Tags');
+
+	// If in hash mode there is no need for the following
+	if ($minimal)
+		return;
+
+	loadJavaScriptFile('tags.js');
 
 	addJavascriptVar('tags_allowed_delete', (int) tagsAllowed());
 	addJavascriptVar('tags_allowed_add', (int) (!empty($topic) && tagsAllowed()));
@@ -316,6 +412,8 @@ function tagDetails($tag_id)
 
 function addTags($topic, $tag_ids)
 {
+	global $modSettings;
+
 	$db = database();
 
 	$inserts = array();
@@ -344,6 +442,20 @@ function addTags($topic, $tag_ids)
 		array('id_term', 'id_topic')
 	);
 
+	if (!empty($modSettings['hashtag_mode']))
+	{
+		$db->query('', '
+			UPDATE {db_prefix}tag_relation
+			SET times_mentioned = times_mentioned + 1
+			WHERE id_term IN ({array_int:tag_ids})
+				AND id_topic = {int:id_topic}',
+			array(
+				'tag_ids' => $tag_ids,
+				'id_topic' => $topic,
+			)
+		);
+	}
+
 	$new_tags = array_diff($tag_ids, $exiting_tags);
 	if (empty($new_tags))
 		return;
@@ -360,6 +472,8 @@ function addTags($topic, $tag_ids)
 
 function removeTagsFromTopic($id_topic)
 {
+	global $modSettings;
+
 	$db = database();
 
 	$id_topic = (int) $id_topic;
@@ -392,10 +506,44 @@ function removeTagsFromTopic($id_topic)
 		)
 	);
 
+	if (!empty($modSettings['hashtag_mode']))
+	{
+		$db->query('', '
+			UPDATE {db_prefix}tag_relation
+			SET times_mentioned = times_mentioned - 1
+			WHERE id_term IN ({array_int:tag_ids})
+				AND id_topic = {int:id_topic}',
+			array(
+				'tag_ids' => $tags,
+				'id_topic' => $id_topic,
+			)
+		);
+	}
+	else
+	{
+		$db->query('', '
+			DELETE
+			FROM {db_prefix}tag_relation
+			WHERE id_topic = {int:current_topic}',
+			array(
+				'current_topic' => $id_topic
+			)
+		);
+	}
+}
+
+function purgeTopicTags($id_topic)
+{
+	if (empty($id_topic))
+		return;
+
+	$db = database();
+
 	$db->query('', '
 		DELETE
 		FROM {db_prefix}tag_relation
-		WHERE id_topic = {int:current_topic}',
+		WHERE id_topic = {int:current_topic}
+			AND times_mentioned < 1',
 		array(
 			'current_topic' => $id_topic
 		)
@@ -470,9 +618,7 @@ function createTags($tags, $matching = false)
 	if (empty($tags))
 		return;
 
-	$inserts = array();
-	foreach ($tags as $tag)
-		$inserts[] = array($tag);
+	$inserts = array(array_unique($tags));
 
 	$db->insert('ignore',
 		'{db_prefix}tag_terms',
@@ -514,9 +660,10 @@ function countTaggedTopics($tag_id)
 
 	// @todo this should become a column in the tag_terms table, but since it implies also moderation, I'll do it later
 	$request = $db->query('', '
-		SELECT COUNT(*)
-		FROM {db_prefix}tag_relation
-		WHERE id_topic = {int:current_tag}',
+		SELECT times_used
+		FROM {db_prefix}tag_terms as tt
+		LEFT JOIN {db_prefix}tag_relation as tr ON (tt.id_term = tr.id_term)
+		WHERE tr.id_topic = {int:current_tag}',
 		array(
 			'current_tag' => $tag_id,
 		)
@@ -620,66 +767,147 @@ function tagsIndexTopics($id_term, $id_member, $start, $per_page, $sort_by, $sor
 
 function recountTags()
 {
-	global $context, $txt;
+	global $context, $txt, $modSettings;
 
 	$db = database();
+
 	$context['page_title'] = $txt['not_done_title'];
 	$context['continue_countdown'] = 3;
 	$context['continue_post_data'] = '';
-	$context['continue_get_data'] = '';
+	$context['continue_get_data'] = '?action=admin;area=maintain;sa=routine;activity=recounttags;' . $context['session_var'] . '=' . $context['session_id'];
 	$context['sub_template'] = 'not_done';
-	$start = microtime(true);
-	$next_start = 0;
+	$next_start = !empty($_REQUEST['start']) ? (int) $_REQUEST['start'] : 0;
+	$next_hstart = !empty($_REQUEST['hstart']) ? (int) $_REQUEST['hstart'] : 0;
+	$step = !empty($_REQUEST['step']) ? (int) $_REQUEST['step'] : 0;
+	$done = false;
 
-	$request = $db->query('', '
-		SELECT id_term, COUNT(*) as times_used
-		FROM {db_prefix}tag_relation
-		WHERE id_term > {int:start}
-		GROUP BY id_term
-		LIMIT {int:limit}',
-		array(
-			'start' => !empty($_REQUEST['start']) ? (int) $_REQUEST['start'] : 0,
-			'limit' => 100
-		)
-	);
-
-	if ($db->num_rows($request) == 0)
-		redirectexit('action=admin;area=maintain;sa=routine;done=recounttags');
-
-	$request2 = $db->query('', '
-		SELECT COUNT(*)
-		FROM {db_prefix}tag_terms',
-		array()
-	);
-	list($max_tags) = $db->fetch_row($request2);
-	$db->free_result($request2);
-
-	while ($row = $db->fetch_assoc($request))
+	// This is going to be looooong: it has to check all the messages, one by one,
+	// even those that don't exist any more
+	if (!empty($modSettings['hashtag_mode']))
 	{
-		// 3 seconds
-		if (microtime(true) - $start > 3)
-			return;
+		// First time here, let's start fresh
+		if (empty($next_hstart))
+		{
+			$db->query('truncate_table', '
+				TRUNCATE {db_prefix}tag_relation');
+			$db->query('truncate_table', '
+				TRUNCATE {db_prefix}tag_terms');
+		}
 
-		$db->query('', '
-			UPDATE {db_prefix}tag_terms
-			SET times_used = {int:times_used}
-			WHERE id_term = {int:current_tag}',
+		$request = $db->query('', '
+			SELECT id_msg, id_topic, body
+			FROM {db_prefix}messages
+			WHERE id_msg > {int:start}
+			LIMIT {int:limit}',
 			array(
-				'times_used' => $row['times_used'],
-				'current_tag' => $row['id_term'],
+				'start' => $next_hstart,
+				'limit' => 100,
 			)
 		);
-		$next_start = $row['id_term'];
-	}
-	$db->free_result($request);
 
-	$context['continue_get_data'] = '?action=admin;area=maintain;sa=routine;activity=recounttags;start=' . $next_start . ';' . $context['session_var'] . '=' . $context['session_id'];
-	$context['continue_percent'] = round(100 * $_REQUEST['start'] / $max_tags);
+		// Let's start here, so we don't take in consideration the previous queries
+		$start = microtime(true);
+		if ($db->num_rows($request) != 0)
+		{
+			while ($row = $db->fetch_assoc($request))
+			{
+				// 3, 2, 1... take a break!
+				if (microtime(true) - $start > 3)
+					break;
+
+				$next_hstart = $row['id_msg'];
+				$possible_tags = cleanHashedTags($row['body']);
+				if (empty($possible_tags))
+					continue;
+
+				$tag_ids = createTags($possible_tags);
+
+				addTags($row['id_topic'], $tag_ids);
+			}
+			$db->free_result($request);
+
+			$context['continue_get_data'] .= ';hstart=' . $next_hstart;
+			$context['continue_percent'] = round(100 * $next_hstart / $modSettings['totalMessages']);
+			return;
+		}
+		else
+		{
+			$db->query('', '
+				DELETE
+				FROM {db_prefix}tag_relation
+				WHERE times_mentioned < 1'
+			);
+			$db->free_result($request);
+		}
+		$done = true;
+	}
+	else
+	{
+		$request = $db->query('', '
+			SELECT id_term, COUNT(*) as times_used
+			FROM {db_prefix}tag_relation
+			WHERE id_term > {int:start}
+			GROUP BY id_term
+			LIMIT {int:limit}',
+			array(
+				'start' => $next_start,
+				'limit' => 100
+			)
+		);
+		$request2 = $db->query('', '
+			SELECT COUNT(*)
+			FROM {db_prefix}tag_terms',
+			array()
+		);
+		list($max_tags) = $db->fetch_row($request2);
+		$db->free_result($request2);
+
+		// Let's start here, so we don't take in consideration the previous queries
+		$start = microtime(true);
+		if ($db->num_rows($request) != 0)
+		{
+			while ($row = $db->fetch_assoc($request))
+			{
+				// 3 seconds
+				if (microtime(true) - $start > 3)
+					break;
+
+				$db->query('', '
+					UPDATE {db_prefix}tag_terms
+					SET times_used = {int:times_used}
+					WHERE id_term = {int:current_tag}',
+					array(
+						'times_used' => $row['times_used'],
+						'current_tag' => $row['id_term'],
+					)
+				);
+				$next_start = $row['id_term'];
+			}
+			$db->free_result($request);
+
+			$context['continue_get_data'] = ';start=' . $next_start;
+			$context['continue_percent'] = round(100 * $_REQUEST['start'] / $max_tags);
+			return;
+		}
+		else
+			$db->free_result($request);
+		$done = true;
+	}
+
+	if ($done)
+	{
+		$db->free_result($request);
+		redirectexit('action=admin;area=maintain;sa=routine;done=recounttags');
+	}
 }
 
 function tagsAllowed($new_topic = false)
 {
 	global $topic, $user_info;
+
+	// In hashtag mode permissions are irrelevant
+	if (!empty($modSettings['hashtag_mode']))
+		return true;
 
 	if ($new_topic && allowedTo('add_tags_own'))
 		return true;

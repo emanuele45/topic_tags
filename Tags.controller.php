@@ -158,7 +158,7 @@ class Tags_Controller
 		);
 
 		// Make sure the starting place makes sense and construct the page index.
-		$context['page_index'] = constructPageIndex($scripturl . '?action=tags;tag=' . $board . '.%1$d' . (isset($_REQUEST['sort']) ? ';sort=' . $this->_sort_method . ($ascending ? '' : ';desc') : ''), $start, $total_topics, $this->_topics_per_page, true);
+		$context['page_index'] = constructPageIndex($scripturl . '?action=tags;tag=' . $board . '.%1$d' . (isset($_REQUEST['sort']) ? ';sort=' . $this->_sort_method . ($ascending ? '' : ';desc') : ''), $start, $total_topics, $this->_topics_per_page, array('prev_next' => true));
 
 		// Mark current and parent boards as seen.
 		if (!$user_info['is_guest'])
@@ -302,7 +302,7 @@ class Tags_Controller
 
 				// We can't pass start by reference.
 				$start = -1;
-				$pages .= constructPageIndex($scripturl . '?topic=' . $row['id_topic'] . '.%1$d', $start, $row['num_replies'] + 1, $this->_messages_per_page, true, false);
+				$pages .= constructPageIndex($scripturl . '?topic=' . $row['id_topic'] . '.%1$d', $start, $row['num_replies'] + 1, $this->_messages_per_page, true, array('prev_next' => false));
 
 				// If we can use all, show all.
 				if (!empty($modSettings['enableAllMessages']) && $row['num_replies'] + 1 < $modSettings['enableAllMessages'])
@@ -512,9 +512,16 @@ class Tags_Controller
 
 	public function action_delete_api()
 	{
-		global $context, $txt, $topic;
+		global $context, $txt, $topic, $modSettings;
 
 		$context['sub_template'] = 'tags_action_delete';
+
+		// In hashtag mode permissions are irrelevant
+		if (!empty($modSettings['hashtag_mode']))
+		{
+			$context['xml_data']['error'] = $txt['tags_not_allowed_hashtag'];
+			return;
+		}
 
 		if (!$this->_init_api())
 			return;
@@ -540,6 +547,13 @@ class Tags_Controller
 		global $context, $txt, $topic;
 
 		$context['sub_template'] = 'tags_action_add';
+
+		// In hashtag mode permissions are irrelevant
+		if (!empty($modSettings['hashtag_mode']))
+		{
+			$context['xml_data']['error'] = $txt['tags_not_allowed_hashtag'];
+			return;
+		}
 
 		if (!$this->_init_api())
 			return;

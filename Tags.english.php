@@ -12,6 +12,7 @@ $txt['empty_tag'] = 'Sorry, it\'s not possible to add an empty tag...';
 $txt['not_allowed_delete_tag'] = 'Sorry, you are not allowed to delete tags';
 $txt['tags_generic_ajax_error'] = 'Sorry, there must be some traffic on the net, an error occurred';
 $txt['tags_generic_backend_error'] = 'Sorry, an error occurred, but we have no idea what exactly';
+$txt['tags_not_allowed_hashtag'] = 'Sorry, but this action is not allowed in hashtag-mode';
 
 $txt['maintain_recounttags'] = 'Recount topics\' tags';
 $txt['maintain_recounttags_info'] = 'Recount the number of times each tag has been used';

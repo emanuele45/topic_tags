@@ -60,9 +60,19 @@
 	left: 1em;
 }
 
+.msg_tagsize1,
+.msg_tagsize2,
+.msg_tagsize3,
+.msg_tagsize4,
+.msg_tagsize5, .msg_tagsize0,
+.msg_tagsize6,
+.msg_tagsize7,
+.msg_tagsize8,
+.msg_tagsize9,
+.msg_tagsize10,
 #show_tags .atag {
 	margin: 0.2em 0.9em 0.2em 0.2em;
-	padding: 0.1em;
+	padding: 0.1em 0.3em;
 	border: 1px solid #bbb;
 	vertical-align: middle;
 	border-radius: 3px;
@@ -104,3 +114,17 @@
 .tagsize10 {
 	font-size: 200%;
 }
+
+.msg_tagsize1,
+.msg_tagsize2,
+.msg_tagsize3,
+.msg_tagsize4,
+.msg_tagsize5, .msg_tagsize0,
+.msg_tagsize6,
+.msg_tagsize7,
+.msg_tagsize8,
+.msg_tagsize9,
+.msg_tagsize10 {
+	margin: 0;
+}
+
