@@ -22,12 +22,12 @@ $(document).ready(function() {
 			var $save = $('<input>').addClass('tags_ajax_save').attr({type: 'submit', value: tags_generic_save}).bind('click', function() {
 				var data = {};
 				event.preventDefault();
-				data[smf_session_var] = smf_session_id;
+				data[elk_session_var] = elk_session_id;
 				data['tags'] = $input.val();
 
 				$.ajax({
 					type: "POST",
-					url: smf_prepareScriptUrl(smf_scripturl) + 'action=tags;sa=add;api;topic=' + topic_id,
+					url: elk_prepareScriptUrl(elk_scripturl) + 'action=tags;sa=add;api;topic=' + topic_id,
 					data: data,
 					success: function(request) {
 						if (typeof request == 'object')
@@ -58,7 +58,7 @@ $(document).ready(function() {
 										var $new_tag = $('<span class="atag"/>').hide().data('tagid', tag_id).append($('<a />').attr({
 											id: 'tag_' + tag_id,
 											class: tagsize,
-											href: smf_scripturl + '?action=tags;tag=' + tag_id + '.0'
+											href: elk_scripturl + '?action=tags;tag=' + tag_id + '.0'
 										}).data('topic', topic_id).text(tag_text));
 
 										if ($last_tag != null)
@@ -126,7 +126,7 @@ function generateDeleteGraphic($element)
 		var data = {};
 
 		event.preventDefault();
-		data[smf_session_var] = smf_session_id;
+		data[elk_session_var] = elk_session_id;
 
 		$.ajax({
 			type: "POST",
@@ -165,8 +165,8 @@ function init_tags_autoSuggest(listItems)
 
 	oTagsSuggest = new smc_AutoSuggest({
 		sSelf: 'oTagsSuggest',
-		sSessionId: smf_session_id,
-		sSessionVar: smf_session_var,
+		sSessionId: elk_session_id,
+		sSessionVar: elk_session_var,
 		iMinimumSearchChars: 2,
 		sSuggestId: 'input_tags', // ???
 		sControlId: 'input_tags',

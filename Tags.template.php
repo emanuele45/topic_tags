@@ -66,17 +66,17 @@ function template_create_tag_cloud($text)
 			aSwapImages: [
 				{
 					sId: \'tagsupshrink\',
-					srcExpanded: smf_images_url + \'/collapse.png\',
+					srcExpanded: elk_images_url + \'/collapse.png\',
 					altExpanded: ' . JavaScriptEscape($txt['hide']) . ',
-					srcCollapsed: smf_images_url + \'/expand.png\',
+					srcCollapsed: elk_images_url + \'/expand.png\',
 					altCollapsed: ' . JavaScriptEscape($txt['show']) . '
 				}
 			],
 			oThemeOptions: {
 				bUseThemeSettings: ' . ($context['user']['is_guest'] ? 'false' : 'true') . ',
 				sOptionName: \'collapse_tags_cloud\',
-				sSessionVar: smf_session_var,
-				sSessionId: smf_session_id
+				sSessionVar: elk_session_var,
+				sSessionId: elk_session_id
 			},
 			oCookieOptions: {
 				bUseCookie: ' . ($context['user']['is_guest'] ? 'true' : 'false') . ',
