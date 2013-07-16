@@ -1,11 +1,12 @@
 <?php
 
 /**
- * @name      ElkArte Forum
- * @copyright ElkArte Forum contributors
+ * Topics Tags
+ *
+ * @author emanuele
  * @license   BSD http://opensource.org/licenses/BSD-3-Clause
  *
- * @version 1.0 Alpha
+ * @version 0.0.1
  */
 
 function template_tags_posting_above()

@@ -1,4 +1,15 @@
 <?php
+/**
+ * Topics Tags
+ *
+ * @author emanuele
+ * @license   BSD http://opensource.org/licenses/BSD-3-Clause
+ *
+ * @version 0.0.1
+ */
+
+if (!defined('ELK'))
+	die('No access...');
 
 /*********************************************************
  * Hooks functions
@@ -127,7 +138,8 @@ function posting_hashed_tags($msgOptions, $topicOptions, $posterOptions, $messag
 	// Do any of them already exist? (And grab all the ids at the same time)
 	$tag_ids = createTags($possible_tags);
 
-	addTags($topicOptions['id'], $tag_ids);
+	if (!empty($tag_ids))
+		addTags($topicOptions['id'], $tag_ids);
 }
 
 function editing_hashed_tags($messages_columns, $update_parameters, $msgOptions, $topicOptions, $posterOptions, $messageInts)
@@ -148,6 +160,10 @@ function editing_hashed_tags($messages_columns, $update_parameters, $msgOptions,
 
 function cleanHashedTags($message)
 {
+	// This one is necessary cleanup potential tags hidden in bbc
+	// (e.g. [something #123]) I know something like this exists, so better remove it!
+	$message = preg_replace('~\[[^\]]*#[^\]]*\]~', '', $message);
+
 	// @todo the regexp is kinda crappy, I have to find a better one...
 	// testing string:
 	// #asd #222 #a.dsa #as1.dd  #asd2#das #asd3 #asd4 #ads5
@@ -225,7 +241,7 @@ function add_tags_maintenance_activity(&$subActions)
 
 function prepare_display_hashed_tags(&$output, &$message)
 {
-	global $modSettings, $context, $topic, $scripturl;
+	global $modSettings, $context, $topic, $scripturl, $links_callback, $links_callback_counter;
 
 	if (empty($modSettings['tags_enabled']) || empty($modSettings['hashtag_mode']))
 		return;
@@ -233,18 +249,34 @@ function prepare_display_hashed_tags(&$output, &$message)
 	if (empty($context['current_tags']))
 		return;
 
+	// Protects hashes into links to avoid broken HTML
+	// ...it would be cool to have hashes linked even inside links though...
+	$links_callback_counter = 0;
+	$links_callback = array();
+	$tmp = preg_replace_callback('~(<a[^>]*>[^<]*<\/a>)~', create_function('$match', '
+		global $links_callback, $links_callback_counter;
+		$links_callback[\'replace\'][$links_callback_counter] = $match[0];
+		$links_callback[\'find\'][$links_callback_counter] = \'<a~~~~~~~>\' . ($links_callback_counter++) . \'</a~~~~~~~>\';
+
+		return $links_callback[\'find\'][$links_callback_counter];'), $output['body']);
+
 	$find = array();
 	$replace = array();
 	foreach ($context['tags_list']['tags'] as $tag)
 		$find[] = '~(\s|<br />|^)#(' . preg_quote($tag['tag_text']) . ')(\s|<br />|$)~';
 
-	$output['body'] = preg_replace_callback($find, create_function('$match', '
+	$tmp = preg_replace_callback($find, create_function('$match', '
 		global $context, $topic, $scripturl;
 		if (!empty($match[2]) && isset($context[\'tags_list\'][\'tags\'][$match[2]]))
 		{
 			$tag = $context[\'tags_list\'][\'tags\'][$match[2]];
 			return $match[1] . \'<a data-topic="\' . $topic . \'" id="tag_\' . $tag[\'id_term\'] . \'" class="msg_tagsize\' . round(10 * $tag[\'times_used\'] / $context[\'tags_list\'][\'max_used\']) . \'" href="\' . $scripturl . \'?action=tags;tag=\' . $tag[\'id_term\'] . \'.0">#\' . $tag[\'tag_text\'] . \'</a>\' . $match[3];
-		}'), $output['body']);
+		}'), $tmp);
+
+	if (!empty($links_callback))
+		$output['body'] = str_replace($links_callback['find'], $links_callback['replace'], $tmp);
+	else
+		$output['body'] = $tmp;
 }
 
 /*********************************************************
@@ -915,7 +947,7 @@ function tagsAllowed($new_topic = false)
 	if (!empty($topic))
 	{
 		require_once(SUBSDIR . '/Topic.subs.php');
-		list($topic_starter, ) = topicStarter($topic);
+		list($topic_starter, ) = topicStatus($topic);
 
 		if (($user_info['id'] == $topic_starter && !allowedTo('add_tags_own')) || ($user_info['id'] != $topic_starter && !allowedTo('add_tags_any')))
 			return false;

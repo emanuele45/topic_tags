@@ -1,15 +1,15 @@
 <?php
 
 /**
- * @name      ElkArte Forum
- * @copyright ElkArte Forum contributors
+ * Topics Tags
+ *
+ * @author emanuele
  * @license   BSD http://opensource.org/licenses/BSD-3-Clause
  *
- * @version 1.0 Alpha
- *
+ * @version 0.0.1
  */
 
-if (!defined('ELKARTE'))
+if (!defined('ELK'))
 	die('No access...');
 
 /**
@@ -27,7 +27,7 @@ class Tags_Controller
 	private $_sort_method = null;
 
 	/**
-	 * Entry point function for likes, permission checks, just makes sure its on
+	 * Entry point function for tags, permission checks, just makes sure its on
 	 */
 	public function pre_dispatch()
 	{
