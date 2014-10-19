@@ -15,7 +15,7 @@ if (!defined('ELK'))
 /**
  * Something to show topics with tags
  */
-class Tags_Controller
+class Tags_Controller extends Action_Controller
 {
 	/**
 	 * Dunno if I'll need these two, though let's put them here
@@ -82,6 +82,7 @@ class Tags_Controller
 		$context['name'] = $this->_name;
 		// @todo: implement tag description
 		$context['description'] = '';
+		$context['sub_template'] = 'topic_listing';
 		$template_layers = Template_Layers::getInstance();
 
 		// How many topics do we have in total?
@@ -358,8 +359,9 @@ class Tags_Controller
 						'href' => !empty($row['first_id_member']) ? $scripturl . '?action=profile;u=' . $row['first_id_member'] : '',
 						'link' => !empty($row['first_id_member']) ? '<a href="' . $scripturl . '?action=profile;u=' . $row['first_id_member'] . '" title="' . $txt['profile_of'] . ' ' . $row['first_display_name'] . '" class="preview">' . $row['first_display_name'] . '</a>' : $row['first_display_name']
 					),
-					'time' => relativeTime($row['first_poster_time']),
+					'time' => standardTime($row['first_poster_time']),
 					'timestamp' => forum_time(true, $row['first_poster_time']),
+					'html_time' => htmlTime($row['first_poster_time']),
 					'subject' => $row['first_subject'],
 					'preview' => $row['first_body'],
 					'icon' => $row['first_icon'],
@@ -376,8 +378,9 @@ class Tags_Controller
 						'href' => !empty($row['last_id_member']) ? $scripturl . '?action=profile;u=' . $row['last_id_member'] : '',
 						'link' => !empty($row['last_id_member']) ? '<a href="' . $scripturl . '?action=profile;u=' . $row['last_id_member'] . '">' . $row['last_display_name'] . '</a>' : $row['last_display_name']
 					),
-					'time' => relativeTime($row['last_poster_time']),
+					'time' => standardTime($row['last_poster_time']),
 					'timestamp' => forum_time(true, $row['last_poster_time']),
+					'html_time' => htmlTime($row['last_poster_time']),
 					'subject' => $row['last_subject'],
 					'preview' => $row['last_body'],
 					'icon' => $row['last_icon'],
@@ -385,6 +388,7 @@ class Tags_Controller
 					'href' => $scripturl . '?topic=' . $row['id_topic'] . ($user_info['is_guest'] ? ('.' . (!empty($options['view_newest_first']) ? 0 : ((int) (($row['num_replies']) / $context['pageindex_multiplier'])) * $context['pageindex_multiplier']) . '#msg' . $row['id_last_msg']) : (($row['num_replies'] == 0 ? '.0' : '.msg' . $row['id_last_msg']) . '#new')),
 					'link' => '<a href="' . $scripturl . '?topic=' . $row['id_topic'] . ($user_info['is_guest'] ? ('.' . (!empty($options['view_newest_first']) ? 0 : ((int) (($row['num_replies']) / $context['pageindex_multiplier'])) * $context['pageindex_multiplier']) . '#msg' . $row['id_last_msg']) : (($row['num_replies'] == 0 ? '.0' : '.msg' . $row['id_last_msg']) . '#new')) . '" ' . ($row['num_replies'] == 0 ? '' : 'rel="nofollow"') . '>' . $row['last_subject'] . '</a>'
 				),
+				'default_preview' => trim($row[!empty($modSettings['message_index_preview']) && $modSettings['message_index_preview'] == 2 ? 'last_body' : 'first_body']),
 				'is_sticky' => !empty($modSettings['enableStickyTopics']) && !empty($row['is_sticky']),
 				'is_locked' => !empty($row['locked']),
 				'is_poll' => $modSettings['pollMode'] == '1' && $row['id_poll'] > 0,

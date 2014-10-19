@@ -722,7 +722,7 @@ function tagsIndexTopics($id_term, $id_member, $start, $per_page, $sort_by, $sor
 		$request = $db->query('', '
 			SELECT t.id_topic
 			FROM {db_prefix}topics AS t
-				LEFT JOIN {db_prefix}tag_relation as tr ON (tr.id_topic = t.id_topic)' . ($sort_by === 'last_poster' ? '
+				LEFT JOIN {db_prefix}tag_relation AS tr ON (tr.id_topic = t.id_topic)' . ($sort_by === 'last_poster' ? '
 				INNER JOIN {db_prefix}messages AS ml ON (ml.id_msg = t.id_last_msg)' : (in_array($sort_by, array('starter', 'subject')) ? '
 				INNER JOIN {db_prefix}messages AS mf ON (mf.id_msg = t.id_first_msg)' : '')) . ($sort_by === 'starter' ? '
 				LEFT JOIN {db_prefix}members AS memf ON (memf.id_member = mf.id_member)' : '') . ($sort_by === 'last_poster' ? '
