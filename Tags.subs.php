@@ -11,15 +11,9 @@
 if (!defined('ELK'))
 	die('No access...');
 
-/*********************************************************
- * Hooks functions
- *********************************************************/
-function post_page_tags()
+function tags_postPage()
 {
-	global $topic, $context, $modSettings, $txt;
-
-	if (empty($modSettings['tags_enabled']) || !tagsAllowed(true))
-		return;
+	global $modSettings, $topic, $context, $txt;
 
 	// Give the box only for new topics or when editing the first message
 	if (empty($modSettings['hashtag_mode']) && (empty($topic) || $context['is_first_post']))
@@ -42,104 +36,44 @@ function post_page_tags()
 	}
 }
 
-function boardindex_tag_cloud()
+function tags_BICloud()
 {
-	global $modSettings;
-
-	if (empty($modSettings['tags_enabled']))
-		return;
-
-	init_tags_template();
+	init_tags_template(!empty($modSettings['hashtag_mode']));
 	Template_Layers::getInstance()->addEnd('boardindex_tag_cloud');
 
 	styleTags(mostUsedTags());
 }
 
-function topic_tag_cloud($topic_selects, $topic_tables, $topic_parameters)
+function tags_DisplayCloud()
 {
-	global $topic, $modSettings, $context;
+		global $topic, $modSettings, $context;
 
-	if (empty($modSettings['tags_enabled']))
-		return;
+		init_tags_template(!empty($modSettings['hashtag_mode']));
+		Template_Layers::getInstance()->addBefore('topic_tag_cloud', 'pages_and_buttons');
 
-	init_tags_template(!empty($modSettings['hashtag_mode']));
-	Template_Layers::getInstance()->addBefore('topic_tag_cloud', 'pages_and_buttons');
-
-	$context['tags_list'] = topicTags($topic);
-	styleTags($context['tags_list'], $topic);
+		$context['tags_list'] = topicTags($topic);
+		styleTags($context['tags_list'], $topic);
 }
 
-function add_tags_permissions(&$permissionGroups, &$permissionList, &$leftPermissionGroups, &$hiddenPermissions, &$relabelPermissions)
+function tags_new_topics($msgOptions, $topicOptions, $posterOptions)
 {
-	global $modSettings, $modSettings;
-
-	// In hashtag mode permissions are irrelevant
-	if (!empty($modSettings['hashtag_mode']))
-		return;
-
-	loadLanguage('Tags');
-
-	$permissionList['board']['add_tags'] = array(true, 'topic', 'make_posts');
-
-	if (empty($modSettings['tags_enabled']))
-		$hiddenPermissions[] = 'add_tags';
-}
-
-function add_tags_illegal_permissions()
-{
-	global $context, $modSettings;
-
-	// In hashtag mode permissions are irrelevant
-	if (!empty($modSettings['hashtag_mode']))
-		return;
-
-	loadLanguage('Tags');
-
-	$context['non_guest_permissions'][] = 'add_tags';
-}
-
-function posting_tags($msgOptions, $topicOptions, $posterOptions)
-{
-	global $context, $modSettings;
-
-	if (!empty($modSettings['hashtag_mode']))
-		return posting_hashed_tags($msgOptions, $topicOptions, $posterOptions, array(), array());
-
-	if (empty($modSettings['tags_enabled']) || !tagsAllowed(true))
-		return;
-
-	// I want to have tags set only for the entire topic (and for now, attached only to the first msg)
-	require_once(SUBSDIR . '/Messages.subs.php');
-	$topic_info = basicMessageInfo($msgOptions['id'], false, true);
-	if (!$topic_info['id_first_msg'])
-		return;
-
-	// Since this is only for new topics I can just check that
-	if (!empty($_POST['tags']))
-	{
-		$possible_tags = cleanPostedTags();
-
-		// Do any of them already exist? (And grab all the ids at the same time)
-		$tag_ids = createTags($possible_tags);
-
-		addTags($topicOptions['id'], $tag_ids);
-	}
-}
-
-function posting_hashed_tags($msgOptions, $topicOptions, $posterOptions, $message_columns, $message_parameters)
-{
-	global $modSettings;
-
-	if (empty($modSettings['tags_enabled']) || empty($modSettings['hashtag_mode']) || empty($topicOptions['id']))
-		return;
-
-	$possible_tags = cleanHashedTags($msgOptions['body']);
+	$possible_tags = cleanPostedTags();
 
 	// Do any of them already exist? (And grab all the ids at the same time)
 	$tag_ids = createTags($possible_tags);
 
+	addTags($topicOptions['id'], $tag_ids);
+}
+
+function posting_hashed_tags($body, $topic_id)
+{
+	$possible_tags = cleanHashedTags($body);
+
+	// Do any of them already exist? (And grab all the ids at the same time)
+	$tag_ids = createTags($possible_tags);
+print_r($tag_ids);
 	if (!empty($tag_ids))
-		addTags($topicOptions['id'], $tag_ids);
+		addTags($topic_id, $tag_ids);
 }
 
 function editing_hashed_tags($messages_columns, $update_parameters, $msgOptions, $topicOptions, $posterOptions, $messageInts)
@@ -186,68 +120,9 @@ function cleanHashedTags($message)
 		return array();
 }
 
-function editing_tags($messages_columns, $update_parameters, $msgOptions, $topicOptions, $posterOptions, $messageInts)
-{
-	global $modSettings;
-
-	if (empty($modSettings['tags_enabled']) || !tagsAllowed())
-		return;
-
-	// I want to have tags set only for the entire topic (and for now, attached only to the first msg)
-	require_once(SUBSDIR . '/Messages.subs.php');
-	$topic_info = basicMessageInfo($msgOptions['id'], false, true);
-	if (!$topic_info['id_first_msg'])
-		return;
-
-	$possible_tags = cleanPostedTags();
-
-	// Remove goes before the empty check because if you have cleaned up the
-	// input you want to remove everything
-	removeTagsFromTopic($topicOptions['id']);
-
-	if (empty($possible_tags))
-		return;
-
-	// Usual: do they exist? If so, ids please!
-	$tag_ids = createTags($possible_tags);
-
-	addTags($topicOptions['id'], $tag_ids);
-}
-
-function add_routine_tags_recount()
-{
-	global $context, $txt, $scripturl;
-
-	loadLanguage('Tags');
-
-	if (isset($_GET['done']) && $_GET['done'] == 'recounttags')
-		$context['maintenance_finished'] = $txt['maintain_recounttags'];
-
-	$context['routine_actions']['recounttags'] = array(
-		'url' => $scripturl . '?action=admin;area=maintain;sa=routine;activity=recounttags',
-		'title' => $txt['maintain_recounttags'],
-		'description' => $txt['maintain_recounttags_info'],
-		'submit' => $txt['maintain_run_now'],
-		'hidden' => array(
-			'session_var' => 'session_id',
-		)
-	);
-}
-
-function add_tags_maintenance_activity(&$subActions)
-{
-	$subActions['routine']['activities']['recounttags'] = 'recountTags';
-}
-
-function prepare_display_hashed_tags(&$output, &$message)
+function tags_protect_hashes($body)
 {
 	global $modSettings, $context, $topic, $scripturl, $links_callback, $links_callback_counter;
-
-	if (empty($modSettings['tags_enabled']) || empty($modSettings['hashtag_mode']))
-		return;
-
-	if (empty($context['current_tags']))
-		return;
 
 	// Protects hashes into links to avoid broken HTML
 	// ...it would be cool to have hashes linked even inside links though...
@@ -258,7 +133,7 @@ function prepare_display_hashed_tags(&$output, &$message)
 		$links_callback[\'replace\'][$links_callback_counter] = $match[0];
 		$links_callback[\'find\'][$links_callback_counter] = \'<a~~~~~~~>\' . ($links_callback_counter++) . \'</a~~~~~~~>\';
 
-		return $links_callback[\'find\'][$links_callback_counter];'), $output['body']);
+		return $links_callback[\'find\'][$links_callback_counter];'), $body);
 
 	$find = array();
 	$replace = array();
@@ -274,18 +149,13 @@ function prepare_display_hashed_tags(&$output, &$message)
 		}'), $tmp);
 
 	if (!empty($links_callback))
-		$output['body'] = str_replace($links_callback['find'], $links_callback['replace'], $tmp);
+		$body = str_replace($links_callback['find'], $links_callback['replace'], $tmp);
 	else
-		$output['body'] = $tmp;
+		$body = $tmp;
+
+	return $body;
 }
 
-/*********************************************************
- * End of Hooks functions
- *********************************************************/
-
-/*********************************************************
- * Real subs
- *********************************************************/
 function init_tags_template($minimal = false)
 {
 	global $txt, $topic;
@@ -440,6 +310,27 @@ function tagDetails($tag_id)
 	$db->free_result($request);
 
 	return $tag_details;
+}
+
+function getTagsByName($tags)
+{
+	$db = database();
+
+	$request = $db->query('', '
+		SELECT id_term
+		FROM {db_prefix}tag_terms
+		WHERE tag_text IN ({array_string:tags})',
+		array(
+			'tags' => $tags,
+		)
+	);
+
+	$tags_id = array();
+	while ($row = $db->fetch_assoc($request))
+		$tags_id[] = $row['id_term'];
+	$db->free_result($request);
+
+	return $tags_id;
 }
 
 function addTags($topic, $tag_ids)
@@ -642,6 +533,22 @@ function removeTag($tag_id, $topic_id = false)
 	}
 }
 
+function dropTagsFromTopic($tags_id, $topic_id)
+{
+	$db = database();
+
+	$db->query('', '
+		UPDATE {db_prefix}tag_relation
+		SET times_mentioned = CASE WHEN times_mentioned <= 1 THEN 0 ELSE times_mentioned - 1 END
+		WHERE id_term IN ({arra_int:tags})
+			AND id_topic = {int:current_topic}',
+		array(
+			'tags' => $tag_id,
+			'current_topic' => $topic_id,
+		)
+	);
+}
+
 function createTags($tags, $matching = false)
 {
 	$db = database();
@@ -650,7 +557,10 @@ function createTags($tags, $matching = false)
 	if (empty($tags))
 		return;
 
-	$inserts = array(array_unique($tags));
+	$tags = array_unique((array) $tags);
+	$inserts = array();
+	foreach ($tags as $tag)
+		$inserts[] = array($tag);
 
 	$db->insert('ignore',
 		'{db_prefix}tag_terms',
@@ -822,8 +732,6 @@ function recountTags()
 		{
 			$db->query('truncate_table', '
 				TRUNCATE {db_prefix}tag_relation');
-			$db->query('truncate_table', '
-				TRUNCATE {db_prefix}tag_terms');
 		}
 
 		$request = $db->query('', '
@@ -848,13 +756,7 @@ function recountTags()
 					break;
 
 				$next_hstart = $row['id_msg'];
-				$possible_tags = cleanHashedTags($row['body']);
-				if (empty($possible_tags))
-					continue;
-
-				$tag_ids = createTags($possible_tags);
-
-				addTags($row['id_topic'], $tag_ids);
+				posting_hashed_tags($row['body'], $row['id_topic']);
 			}
 			$db->free_result($request);
 
@@ -862,15 +764,7 @@ function recountTags()
 			$context['continue_percent'] = round(100 * $next_hstart / $modSettings['totalMessages']);
 			return;
 		}
-		else
-		{
-			$db->query('', '
-				DELETE
-				FROM {db_prefix}tag_relation
-				WHERE times_mentioned < 1'
-			);
-			$db->free_result($request);
-		}
+
 		$done = true;
 	}
 	else
