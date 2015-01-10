@@ -15,7 +15,7 @@ if (!defined('ELK'))
 /*********************************************************
  * Hooks functions
  *********************************************************/
-class Tags
+class Tags_Integrate
 {
 	protected static function init($perm = false)
 	{
@@ -37,7 +37,9 @@ class Tags
 		if (!self::init(true))
 			return;
 
-		tags_postPage();
+		require_once(SUBSDIR . '/TagsStyler.class.php');
+		$styler = new Tags_Styler();
+		$styler->tags_postPage();
 	}
 
 	public static function mark_read_button()
@@ -45,7 +47,10 @@ class Tags
 		if (!self::init())
 			return;
 
-		tags_BICloud();
+		
+		require_once(SUBSDIR . '/TagsStyler.class.php');
+		$styler = new Tags_Styler();
+		$styler->tags_BICloud();
 	}
 
 	public static function display_topic($topicinfo)
@@ -53,7 +58,10 @@ class Tags
 		if (!self::init())
 			return;
 
-		tags_DisplayCloud();
+		
+		require_once(SUBSDIR . '/TagsStyler.class.php');
+		$styler = new Tags_Styler();
+		$styler->tags_DisplayCloud();
 	}
 
 	public static function load_permissions(&$permissionGroups, &$permissionList, &$leftPermissionGroups, &$hiddenPermissions, &$relabelPermissions)
@@ -92,10 +100,11 @@ class Tags
 		if (empty($modSettings['tags_enabled']))
 			return;
 
-		require_once(SUBSDIR . '/Tags.subs.php');
+		require_once(SUBSDIR . '/TagsPoster.class.php');
+		$poster = new Tags_Poster();
 
 		if (!empty($modSettings['hashtag_mode']))
-			return posting_hashed_tags($msgOptions['body'], $topicOptions['id']);
+			return $poster->posting_hashed_tags($msgOptions['body'], $topicOptions['id']);
 
 		if (!tagsAllowed(true))
 			return;
@@ -109,7 +118,7 @@ class Tags
 		// Since this is only for new topics I can just check that
 		if (!empty($_POST['tags']))
 		{
-			tags_new_topics();
+			$poster->tags_new_topics();
 		}
 	}
 
@@ -120,8 +129,9 @@ class Tags
 		if (empty($modSettings['tags_enabled']) || empty($modSettings['hashtag_mode']) || empty($topicOptions['id']))
 			return;
 
-		require_once(SUBSDIR . '/Tags.subs.php');
-		posting_hashed_tags($msgOptions['body'], $topicOptions['id']);
+		require_once(SUBSDIR . '/TagsPoster.class.php');
+		$poster = new Tags_Poster();
+		$poster->posting_hashed_tags($msgOptions['body'], $topicOptions['id']);
 	}
 
 	public static function modify_post($messages_columns, $update_parameters, $msgOptions, $topicOptions, $posterOptions, $messageInts)
@@ -131,13 +141,15 @@ class Tags
 		if (empty($modSettings['tags_enabled']) || empty($modSettings['hashtag_mode']))
 			return;
 
-		$possible_tags = cleanHashedTags($msgOptions['body']);
+		require_once(SUBSDIR . '/TagsPoster.class.php');
+		$poster = new Tags_Poster();
+		$possible_tags = $poster->cleanHashedTags($msgOptions['body']);
 
-		$tag_ids = createTags($possible_tags);
+		$tag_ids = $poster->createTags($possible_tags);
 
-		addTags($topicOptions['id'], $tag_ids);
+		$poster->addTags($topicOptions['id'], $tag_ids);
 
-		purgeTopicTags($topicOptions['id']);*/
+		$poster->purgeTopicTags($topicOptions['id']);*/
 	}
 
 	public static function modify_post2($messages_columns, $update_parameters, $msgOptions, $topicOptions, $posterOptions, $messageInts)
@@ -155,19 +167,21 @@ class Tags
 		if (!$topic_info['id_first_msg'])
 			return;
 
-		$possible_tags = cleanPostedTags();
+		require_once(SUBSDIR . '/TagsPoster.class.php');
+		$poster = new Tags_Poster();
+		$possible_tags = $poster->cleanPostedTags();
 
 		// Remove goes before the empty check because if you have cleaned up the
 		// input you want to remove everything
-		removeTagsFromTopic($topicOptions['id']);
+		$poster->removeTagsFromTopic($topicOptions['id']);
 
 		if (empty($possible_tags))
 			return;
 
 		// Usual: do they exist? If so, ids please!
-		$tag_ids = createTags($possible_tags);
+		$tag_ids = $poster->createTags($possible_tags);
 
-		addTags($topicOptions['id'], $tag_ids);
+		$poster->addTags($topicOptions['id'], $tag_ids);
 	}
 
 	public static function routine_maintenance()
@@ -192,7 +206,7 @@ class Tags
 
 	public static function manage_maintenance(&$subActions)
 	{
-		require_once(SUBSDIR . '/Tags.subs.php');
+		require_once(ADMINDIR . '/ManageTags.controller.php');
 		$subActions['routine']['activities']['recounttags'] = 'recountTags';
 	}
 
@@ -206,23 +220,25 @@ class Tags
 		if (empty($context['current_tags']))
 			return;
 
-		require_once(SUBSDIR . '/Tags.subs.php');
+		require_once(SUBSDIR . '/TagsPoster.class.php');
+		$poster = new Tags_Poster();
 
-		$output['body'] = tags_protect_hashes($output['body']);
+		$output['body'] = $poster->tags_protect_hashes($output['body']);
 	}
 
 	public static function remove_message($message)
 	{
 		require_once(SUBSDIR . '/Messages.subs.php');
-		require_once(SUBSDIR . '/Tags.subs.php');
+		require_once(SUBSDIR . '/TagsPoster.class.php');
+		$poster = new Tags_Poster();
 
 		$msg_info = basicMessageInfo($message, false, true);
-		$tags = cleanHashedTags($msg_info['body']);
+		$tags = $poster->cleanHashedTags($msg_info['body']);
 		_debug($tags,0,0,1);
-		$tags_id = getTagsByName($tags);
+		$tags_id = $poster->getTagsByName($tags);
 
-		dropTagFromTopic($tags_id, $msg_info['id_topic']);
+		$poster->dropTagsFromTopic($tags_id, $msg_info['id_topic']);
 
-		purgeTopicTags($msg_info['id_topic']);
+		$poster->purgeTopicTags($msg_info['id_topic']);
 	}
 }

@@ -25,6 +25,8 @@ class Tags_Controller extends Action_Controller
 	private $_topics_per_page = null;
 	private $_messages_per_page = null;
 	private $_sort_method = null;
+	private $_poster = null;
+	private $_styler = null;
 
 	/**
 	 * Entry point function for tags, permission checks, just makes sure its on
@@ -52,9 +54,11 @@ class Tags_Controller extends Action_Controller
 		if (empty($this->_id))
 			fatal_lang_error('no_such_tag', false);
 
-		require_once(SUBSDIR . '/Tags.subs.php');
+		require_once(SUBSDIR . '/TagsPoster.class.php');
 
-		$details = tagDetails($this->_id);
+		$this->_poster = new Tags_Poster();
+		$this->_styler = new Tags_Styler();
+		$details = $this->_poster->tagDetails($this->_id);
 
 		if (empty($details) || empty($details['tag_text']))
 			fatal_lang_error('no_such_tag', false);
@@ -86,7 +90,7 @@ class Tags_Controller extends Action_Controller
 		$template_layers = Template_Layers::getInstance();
 
 		// How many topics do we have in total?
-		$total_topics = countTaggedTopics($this->_id);
+		$total_topics = $this->_poster->countTaggedTopics($this->_id);
 
 		// View all the topics, or just a few?
 		$this->_topics_per_page = empty($modSettings['disableCustomPerPage']) && !empty($options['topics_per_page']) ? $options['topics_per_page'] : $modSettings['defaultMaxTopics'];
@@ -243,7 +247,7 @@ class Tags_Controller extends Action_Controller
 			'fake_ascending' => $fake_ascending
 		);
 
-		$topics_info = tagsIndexTopics($this->_id, $user_info['id'], $start, $this->_topics_per_page, $this->_sort_method, $sort_column, $indexOptions);
+		$topics_info = $this->_poster->tagsIndexTopics($this->_id, $user_info['id'], $start, $this->_topics_per_page, $this->_sort_method, $sort_column, $indexOptions);
 
 		// Prepare for links to guests (for search engines)
 		$context['pageindex_multiplier'] = empty($modSettings['disableCustomPerPage']) && !empty($options['messages_per_page']) ? $options['messages_per_page'] : $modSettings['defaultMaxMessages'];
@@ -538,9 +542,9 @@ class Tags_Controller extends Action_Controller
 			return;
 		}
 		if (empty($topic))
-			$context['xml_data']['result'] = (int) removeTag($tag_id);
+			$context['xml_data']['result'] = (int) $this->_poster->removeTag($tag_id);
 		else
-			$context['xml_data']['result'] = (int) removeTag($tag_id, $topic);
+			$context['xml_data']['result'] = (int) $this->_poster->removeTag($tag_id, $topic);
 
 		if (empty($context['xml_data']['result']))
 			$context['xml_data']['error'] = $txt['no_such_tag'];
@@ -562,7 +566,7 @@ class Tags_Controller extends Action_Controller
 		if (!$this->_init_api())
 			return;
 
-		$tags_text = cleanPostedTags();
+		$tags_text = $this->_poster->cleanPostedTags();
 
 		if (empty($tags_text))
 		{
@@ -570,9 +574,9 @@ class Tags_Controller extends Action_Controller
 			return;
 		}
 
-		$tags = createTags($tags_text);
-		addTags($topic, $tags);
-		prepareXmlTags(topicTags($topic), $topic);
+		$tags = $this->_poster->createTags($tags_text);
+		$this->_poster->addTags($topic, $tags);
+		$this->_styler->prepareXmlTags($this->_poster->topicTags($topic), $topic);
 	}
 
 	public function action_search_api()
@@ -591,7 +595,7 @@ class Tags_Controller extends Action_Controller
 			return;
 		}
 
-		$context['xml_data'] = apiSearchTags($search);
+		$context['xml_data'] = $this->_poster->apiSearchTags($search);
 		
 	}
 
@@ -612,9 +616,7 @@ class Tags_Controller extends Action_Controller
 			return false;
 		}
 
-		require_once(SUBSDIR . '/Tags.subs.php');
-
-		if (($permission_strict && !tagsAllowed()) || ($permission_strict && !allowedTo('add_tags_own')))
+		if (($permission_strict && !$this->_poster->tagsAllowed()) || ($permission_strict && !allowedTo('add_tags_own')))
 		{
 			$context['xml_data']['error'] = $txt['not_allowed_delete_tag'];
 			return false;
