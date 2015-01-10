@@ -94,7 +94,7 @@ function recountTags()
 			FROM {db_prefix}tag_terms',
 			array()
 		);
-		list($max_tags) = $db->fetch_row($request2);
+		list ($max_tags) = $db->fetch_row($request2);
 		$db->free_result($request2);
 
 		// Let's start here, so we don't take in consideration the previous queries

@@ -66,7 +66,7 @@ class Tags_Integrate
 
 	public static function load_permissions(&$permissionGroups, &$permissionList, &$leftPermissionGroups, &$hiddenPermissions, &$relabelPermissions)
 	{
-		global $modSettings, $modSettings;
+		global $modSettings;
 
 		// In hashtag mode permissions are irrelevant
 		if (!empty($modSettings['hashtag_mode']))
@@ -95,13 +95,13 @@ class Tags_Integrate
 
 	public static function create_topic($msgOptions, $topicOptions, $posterOptions)
 	{
-		global $context, $modSettings;
+		global $modSettings;
 
 		if (empty($modSettings['tags_enabled']))
 			return;
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster(1);
+		$poster = new Tags_Poster('topics');
 
 		if (!empty($modSettings['hashtag_mode']))
 			return $poster->postHashed($msgOptions['body'], $topicOptions['id']);
@@ -130,7 +130,7 @@ class Tags_Integrate
 			return;
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster(1);
+		$poster = new Tags_Poster('topics');
 		$poster->postHashed($msgOptions['body'], $topicOptions['id']);
 	}
 
@@ -142,14 +142,14 @@ class Tags_Integrate
 			return;
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster(1);
+		$poster = new Tags_Poster('topics');
 		$possible_tags = $poster->cleanHashedTags($msgOptions['body']);
 
 		$tag_ids = $poster->createTags($possible_tags);
 
 		$poster->addTags($topicOptions['id'], $tag_ids);
 
-		$poster->purgeTopicTags($topicOptions['id']);*/
+		$poster->purgeTargetTags($topicOptions['id']);*/
 	}
 
 	public static function modify_post2($messages_columns, $update_parameters, $msgOptions, $topicOptions, $posterOptions, $messageInts)
@@ -168,7 +168,7 @@ class Tags_Integrate
 			return;
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster(1);
+		$poster = new Tags_Poster('topics');
 		$possible_tags = $poster->cleanPostedTags($_POST['tags']);
 
 		// Remove goes before the empty check because if you have cleaned up the
@@ -212,33 +212,36 @@ class Tags_Integrate
 
 	public static function prepare_display_context(&$output, &$message)
 	{
-		global $modSettings, $context, $topic, $scripturl, $links_callback, $links_callback_counter;
+		global $modSettings, $context, $topic;
 
 		if (empty($modSettings['tags_enabled']) || empty($modSettings['hashtag_mode']))
 			return;
 
+		$poster = new Tags_Poster('topics');
+
+		$context['current_tags'] = $poster->getTargetTags($topic, true);
 		if (empty($context['current_tags']))
 			return;
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster(1);
+		$poster = new Tags_Poster('topics');
 
-		$output['body'] = $poster->tags_protect_hashes($output['body'], $topic);
+		$output['body'] = $poster->createHashLinks($output['body'], $topic);
 	}
 
 	public static function remove_message($message)
 	{
 		require_once(SUBSDIR . '/Messages.subs.php');
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster(1);
+		$poster = new Tags_Poster('topics');
 
 		$msg_info = basicMessageInfo($message, false, true);
 		$tags = $poster->cleanHashedTags($msg_info['body']);
 		_debug($tags,0,0,1);
-		$tags_id = $poster->getTagsByName($tags);
+		$tags_id = $poster->getTagsIdByName($tags);
 
-		$poster->dropTagsFromTopic($tags_id, $msg_info['id_topic']);
+		$poster->dropTagsFromTarget($tags_id, $msg_info['id_topic']);
 
-		$poster->purgeTopicTags($msg_info['id_topic']);
+		$poster->purgeTargetTags($msg_info['id_topic']);
 	}
 }

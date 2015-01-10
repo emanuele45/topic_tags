@@ -90,7 +90,7 @@ class Tags_Controller extends Action_Controller
 		$template_layers = Template_Layers::getInstance();
 
 		// How many topics do we have in total?
-		$total_topics = $this->_poster->countTaggedTopics($this->_id);
+		$total_topics = $this->_poster->countTaggedTargets($this->_id);
 
 		// View all the topics, or just a few?
 		$this->_topics_per_page = empty($modSettings['disableCustomPerPage']) && !empty($options['topics_per_page']) ? $options['topics_per_page'] : $modSettings['defaultMaxTopics'];

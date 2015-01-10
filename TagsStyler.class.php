@@ -25,15 +25,14 @@ class Tags_Styler
 
 			loadJavaScriptFile('suggest.js');
 			require_once(SUBSDIR . '/TagsPoster.class.php');
-			$poster = new Tags_Poster(1);
+			$poster = new Tags_Poster('topics');
 
-			$context['current_tags'] = $poster->topicTags($topic, true);
+			$context['current_tags'] = $poster->getTargetTags($topic, true);
 			if (!empty($context['current_tags']))
 			{
 				addJavascriptVar('current_tags', 'var current_tags = new Array(' . implode(', ', $context['current_tags']) . ');', true);
 				addJavascriptVar('want_to_restore_tags', $txt['want_to_restore_tags'], true);
 				addJavascriptVar('tags_will_be_deleted', $txt['tags_will_be_deleted'], true);
-
 			}
 
 			addJavascriptVar('autosuggest_delete_item', $txt['autosuggest_delete_item'], true);
@@ -42,11 +41,13 @@ class Tags_Styler
 
 	function tags_BICloud()
 	{
+		global $modSettings;
+
 		$this->init_tags_template(!empty($modSettings['hashtag_mode']));
 		Template_Layers::getInstance()->addEnd('boardindex_tag_cloud');
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster(1);
+		$poster = new Tags_Poster('topics');
 		$this->styleTags($poster->mostUsedTags());
 	}
 
@@ -58,8 +59,8 @@ class Tags_Styler
 			Template_Layers::getInstance()->addBefore('topic_tag_cloud', 'pages_and_buttons');
 
 			require_once(SUBSDIR . '/TagsPoster.class.php');
-			$poster = new Tags_Poster(1);
-			$context['tags_list'] = $poster->topicTags($topic);
+			$poster = new Tags_Poster('topics');
+			$context['tags_list'] = $poster->getTargetTags($topic);
 			$this->styleTags($context['tags_list'], $topic);
 	}
 
@@ -94,15 +95,17 @@ class Tags_Styler
 			$context['current_tags'][$tag['id_term']] = '<a' . ($topic_id !== false ? ' data-topic="' . $topic_id . '"': '') . ' id="tag_' . $tag['id_term'] . '" class="tagsize' . round(10 * $tag['times_used'] / $tags['max_used']) . '" href="' . $scripturl . '?action=tags;tag=' . $tag['id_term'] . '.0">' . $tag['tag_text'] . '</a>';
 	}
 
-	function prepareXmlTags($tags, $topic_id = false)
+	function prepareXmlTags($tags)
 	{
-		global $context, $scripturl;
-
-		$context['xml_data']['result'] = array();
+		$xml_data['result'] = array();
 		foreach ($tags['tags'] as $tag)
-			$context['xml_data']['result'][$tag['id_term']] = array(
+		{
+			$xml_data['result'][$tag['id_term']] = array(
 				'tagsize' => round(10 * $tag['times_used'] / $tags['max_used']),
 				'text' => $tag['tag_text']
 			);
+		}
+
+		return $xml_data;
 	}
 }

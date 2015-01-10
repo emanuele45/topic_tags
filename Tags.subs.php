@@ -13,7 +13,7 @@ if (!defined('ELK'))
 
 function tagsAllowed($new_topic = false)
 {
-	global $topic, $user_info;
+	global $topic, $user_info, $modSettings;
 
 	// In hashtag mode permissions are irrelevant
 	if (!empty($modSettings['hashtag_mode']))
@@ -25,7 +25,7 @@ function tagsAllowed($new_topic = false)
 	if (!empty($topic))
 	{
 		require_once(SUBSDIR . '/Topic.subs.php');
-		list($topic_starter, ) = topicStatus($topic);
+		list ($topic_starter, ) = topicStatus($topic);
 
 		if (($user_info['id'] == $topic_starter && !allowedTo('add_tags_own')) || ($user_info['id'] != $topic_starter && !allowedTo('add_tags_any')))
 			return false;
@@ -52,7 +52,7 @@ function tagsIndexTopics($id_term, $id_member, $start, $per_page, $sort_by, $sor
 		$request = $db->query('', '
 			SELECT t.id_topic
 			FROM {db_prefix}topics AS t
-				LEFT JOIN {db_prefix}tag_relation AS tr ON (tr.id_topic = t.id_topic)' . ($sort_by === 'last_poster' ? '
+				LEFT JOIN {db_prefix}tag_relation AS tr ON (tr.id_target = t.id_topic)' . ($sort_by === 'last_poster' ? '
 				INNER JOIN {db_prefix}messages AS ml ON (ml.id_msg = t.id_last_msg)' : (in_array($sort_by, array('starter', 'subject')) ? '
 				INNER JOIN {db_prefix}messages AS mf ON (mf.id_msg = t.id_first_msg)' : '')) . ($sort_by === 'starter' ? '
 				LEFT JOIN {db_prefix}members AS memf ON (memf.id_member = mf.id_member)' : '') . ($sort_by === 'last_poster' ? '
@@ -99,7 +99,7 @@ function tagsIndexTopics($id_term, $id_member, $start, $per_page, $sort_by, $sor
 				INNER JOIN {db_prefix}messages AS mf ON (mf.id_msg = t.id_first_msg)
 				LEFT JOIN {db_prefix}members AS meml ON (meml.id_member = ml.id_member)
 				LEFT JOIN {db_prefix}members AS memf ON (memf.id_member = mf.id_member)
-				LEFT JOIN {db_prefix}tag_relation as tr ON (tr.id_topic = t.id_topic)' . ($id_member == 0 ? '' : '
+				LEFT JOIN {db_prefix}tag_relation as tr ON (tr.id_target = t.id_topic)' . ($id_member == 0 ? '' : '
 				LEFT JOIN {db_prefix}log_topics AS lt ON (lt.id_topic = t.id_topic AND lt.id_member = {int:current_member})
 				LEFT JOIN {db_prefix}log_mark_read AS lmr ON (lmr.id_board = t.id_board AND lmr.id_member = {int:current_member})') . (!empty($settings['avatars_on_indexes']) ? '
 				LEFT JOIN {db_prefix}attachments AS a ON (a.id_member = ml.id_member)' : '') . '

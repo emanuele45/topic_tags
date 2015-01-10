@@ -19,7 +19,8 @@ $(document).ready(function() {
 	if (tags_allowed_add)
 	{
 		var $container = $('#show_tags'),
-			target_id = $container.data('target');
+			target_id = $container.data('target'),
+			target_type = $container.data('type');
 
 		var $add = $('<a>').addClass('tag_add').attr('href', '#').click('bind', function(event) {
 			var $add_form = $('<div>').addClass('tags_ajax_form roundframe');
@@ -36,7 +37,7 @@ $(document).ready(function() {
 
 				$.ajax({
 					type: "POST",
-					url: elk_prepareScriptUrl(elk_scripturl) + 'action=tagsman;sa=add;api;target=' + target_id,
+					url: elk_prepareScriptUrl(elk_scripturl) + 'action=tagsapi;sa=add;api;target=' + target_id + ';type=' + target_type,
 					data: data,
 					success: function(request) {
 						if (typeof request == 'object')
@@ -68,7 +69,7 @@ $(document).ready(function() {
 											id: 'tag_' + tag_id,
 											class: tagsize,
 											href: elk_scripturl + '?action=tags;tag=' + tag_id + '.0'
-										}).data('target', target_id).text(tag_text));
+										}).data('target', target_id).data('type', target_type).text(tag_text));
 
 										if ($last_tag != null)
 											$last_tag.parent().parent().after($new_tag);
@@ -139,7 +140,7 @@ function generateDeleteGraphic($element)
 
 		$.ajax({
 			type: "POST",
-			url: url + ';sa=delete;api' + ($a.data('topic') ? ';topic=' + $a.data('topic') : ''),
+			url: url + ';sa=delete;api' + ($a.data('target') ? ';target=' + $a.data('target') : '') + ';type=' + $a.data('type'),
 			data: data,
 			success: function(request) {
 				if (typeof request == 'object')
@@ -179,7 +180,7 @@ function init_tags_autoSuggest(listItems)
 		iMinimumSearchChars: 2,
 		sSuggestId: 'input_tags', // ???
 		sControlId: 'input_tags',
-		sRetrieveURL: '%scripturl%action=tagsman;sa=search;search=%search%;%sessionVar%=%sessionID%;api;time=%time%',
+		sRetrieveURL: '%scripturl%action=tagsapi;sa=search;search=%search%;%sessionVar%=%sessionID%;api;time=%time%',
 		bItemList: true,
 		sPostName: 'tags_autosuggest',
 		sURLMask: 'action=tags;tag=%item_id%',

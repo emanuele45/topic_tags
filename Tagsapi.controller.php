@@ -15,16 +15,13 @@ if (!defined('ELK'))
 /**
  * Something to show topics with tags
  */
-class Tagsman_Controller extends Action_Controller
+class Tagsapi_Controller extends Action_Controller
 {
 	/**
 	 * Dunno if I'll need these two, though let's put them here
 	 */
 	private $_id = null;
 	private $_name = null;
-	private $_topics_per_page = null;
-	private $_messages_per_page = null;
-	private $_sort_method = null;
 	private $_poster = null;
 	private $_styler = null;
 
@@ -38,23 +35,19 @@ class Tagsman_Controller extends Action_Controller
 		require_once(SUBSDIR . '/TagsPoster.class.php');
 		require_once(SUBSDIR . '/TagsStyler.class.php');
 
-		$this->_poster = new Tags_Poster();
-		$this->_styler = new Tags_Styler();
-
 		loadLanguage('Tags');
 
 		// If tags are disabled, we don't go any further
 		if (empty($modSettings['tags_enabled']))
 			fatal_lang_error('feature_disabled', true);
 
-		if (strpos($_REQUEST['tag'], '.') !== false)
-			list ($this->_id, ) = explode('.', $_REQUEST['tag']);
-		else
-			$this->_id = $_REQUEST['tag'];
-		// Now make absolutely sure it's a number.
-		$this->_id = (int) $this->_id;
+		$type = isset($_REQUEST['type']) ? $_REQUEST['type'] : '';
+		$this->_poster = new Tags_Poster($type);
+		$this->_styler = new Tags_Styler();
 
-		if (empty($this->_id))
+		$this->_id = isset($_REQUEST['target']) ? (int) $_REQUEST['target'] : 0;
+
+		if (!$this->_poster->canAccess($this->_id))
 			fatal_lang_error('no_such_tag', false);
 
 		$details = $this->_poster->tagDetails($this->_id);
@@ -123,7 +116,7 @@ class Tagsman_Controller extends Action_Controller
 
 		$tags = $this->_poster->createTags($tags_text);
 		$this->_poster->addTags($topic, $tags);
-		$this->_styler->prepareXmlTags($this->_poster->getTargetTags($topic), $topic);
+		$context['xml_data'] = $this->_styler->prepareXmlTags($this->_poster->getTargetTags($topic));
 	}
 
 	public function action_search_api()

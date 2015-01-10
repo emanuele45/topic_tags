@@ -14,10 +14,36 @@ if (!defined('ELK'))
 class Tags_Poster
 {
 	protected $id_tagger = 1;
+	protected $tagger = null;
 
-	public function __construct($id_action)
+	public function __construct($action)
 	{
-		$this->id_tagger = (int) $id_action;
+		$this->initTagger($action);
+		$this->id_tagger = $this->tagger->getTypeId();
+		$this->tagger_name = $action;
+	}
+
+	public function canAccess($id_target)
+	{
+		return $this->tagger->canAccess($id_target);
+	}
+
+	protected function initTagger($action)
+	{
+		require_once(SUBSDIR . '/Taggers/Tagger.interface.php');
+		$file = SUBSDIR . '/Taggers/' . ucfirst($action) . '.tagger.php';
+
+		if (!file_exists($file))
+		{
+			// This is the only place where "topic" should appear in this file
+			// being the only notification we are sure it's always present,
+			// it's the default one in case of errors.
+			return $this->initTagger('topics');
+		}
+
+		require_once($file);
+		$class = ucfirst($action) . '_Tagger';
+		$this->tagger = new $class();
 	}
 
 	public function postNewTags($tags, $target_id)
@@ -41,6 +67,9 @@ class Tags_Poster
 			$this->addTags($id_target, $tag_ids);
 	}
 
+	/**
+	 * @todo apparently unused.
+	 */
 	function editing_hashed_tags($messages_columns, $update_parameters, $msgOptions, $topicOptions, $posterOptions, $messageInts)
 	{
 		global $modSettings;
@@ -54,7 +83,7 @@ class Tags_Poster
 
 		$this->addTags($topicOptions['id'], $tag_ids);
 
-		$this->purgeTopicTags($topicOptions['id']);
+		$this->purgeTargetTags($topicOptions['id']);
 	}
 
 	function cleanHashedTags($message)
@@ -85,35 +114,38 @@ class Tags_Poster
 			return array();
 	}
 
-	function tags_protect_hashes($body, $id_target)
+	public function createHashLinks($body, $id_target)
 	{
-		global $modSettings, $context, $target, $scripturl, $links_callback, $links_callback_counter;
-
-		$target = $id_target;
+		global $context;
 
 		// Protects hashes into links to avoid broken HTML
 		// ...it would be cool to have hashes linked even inside links though...
 		$links_callback_counter = 0;
 		$links_callback = array();
-		$tmp = preg_replace_callback('~(<a[^>]*>[^<]*<\/a>)~', create_function('$match', '
-			global $links_callback, $links_callback_counter;
-			$links_callback[\'replace\'][$links_callback_counter] = $match[0];
-			$links_callback[\'find\'][$links_callback_counter] = \'<a~~~~~~~>\' . ($links_callback_counter++) . \'</a~~~~~~~>\';
+		$type = $this->tagger_name;
 
-			return $links_callback[\'find\'][$links_callback_counter];'), $body);
+		$tmp = preg_replace_callback('~(<a[^>]*>[^<]*<\/a>)~', function ($match) use (&$links_callback, &$links_callback_counter)
+		{
+			$links_callback['replace'][$links_callback_counter] = $match[0];
+			$links_callback['find'][$links_callback_counter] = '<a~~~~~~~>' . ($links_callback_counter++) . '</a~~~~~~~>';
+
+			return $links_callback['find'][$links_callback_counter];
+		}, $body);
 
 		$find = array();
-		$replace = array();
 		foreach ($context['tags_list']['tags'] as $tag)
-			$find[] = '~(\s|<br />|^)#(' . preg_quote($tag['tag_text']) . ')(\s|<br />|$)~';
+			$find[] = '~(\s|<br />|^)#(' . preg_quote($tag['tag_text'], '~') . ')(\s|<br />|$)~';
 
-		$tmp = preg_replace_callback($find, create_function('$match', '
-			global $context, $target, $scripturl;
-			if (!empty($match[2]) && isset($context[\'tags_list\'][\'tags\'][$match[2]]))
+		$tmp = preg_replace_callback($find, function ($match) use($id_target, $type)
+		{
+			global $context, $scripturl;
+
+			if (!empty($match[2]) && isset($context['tags_list']['tags'][$match[2]]))
 			{
-				$tag = $context[\'tags_list\'][\'tags\'][$match[2]];
-				return $match[1] . \'<a data-target="\' . $target . \'" id="tag_\' . $tag[\'id_term\'] . \'" class="msg_tagsize\' . round(10 * $tag[\'times_used\'] / $context[\'tags_list\'][\'max_used\']) . \'" href="\' . $scripturl . \'?action=tags;tag=\' . $tag[\'id_term\'] . \'.0">#\' . $tag[\'tag_text\'] . \'</a>\' . $match[3];
-			}'), $tmp);
+				$tag = $context['tags_list']['tags'][$match[2]];
+				return $match[1] . '<a data-target="' . $id_target . '" data-type="' . $type . '" id="tag_' . $tag['id_term'] . '" class="msg_tagsize' . round(10 * $tag['times_used'] / $context['tags_list']['max_used']) . '" href="' . $scripturl . '?action=tags;tag=' . $tag['id_term'] . '.0">#' . $tag['tag_text'] . '</a>' . $match[3];
+			}
+		}, $tmp);
 
 		if (!empty($links_callback))
 			$body = str_replace($links_callback['find'], $links_callback['replace'], $tmp);
@@ -138,11 +170,14 @@ class Tags_Poster
 		return $possible_tags;
 	}
 
-	function topicTags($topic_id, $only_tags = false)
+	/**
+	 * 
+	 */
+	function getTargetTags($id_target, $only_text = false)
 	{
-		$topic_id = (int) $topic_id;
+		$id_target = (int) $id_target;
 
-		if (empty($topic_id))
+		if (empty($id_target))
 			return;
 
 		$db = database();
@@ -150,17 +185,18 @@ class Tags_Poster
 		$request = $db->query('', '
 			SELECT tt.id_term, tt.tag_text, tt.times_used
 			FROM {db_prefix}tag_terms as tt
-			LEFT JOIN {db_prefix}tag_relation as tr ON (tr.id_term = tt.id_term)
-			WHERE tr.id_target = {int:current_topic}
+				LEFT JOIN {db_prefix}tag_relation as tr ON (tr.id_term = tt.id_term)
+			WHERE tr.id_target = {int:current_target}
 				AND type = {int:tagger}',
 			array(
-				'current_topic' => $topic_id,
+				'current_target' => $id_target,
 				'tagger' => $this->id_tagger,
 			)
 		);
 		$tags = array();
 		$highest_usage = 1;
-		if ($only_tags)
+
+		if ($only_text)
 		{
 			while ($row = $db->fetch_assoc($request))
 			{
@@ -238,7 +274,7 @@ class Tags_Poster
 		return $tag_details;
 	}
 
-	function getTagsByName($tags)
+	function getTagsIdByName($tags)
 	{
 		$db = database();
 
@@ -323,24 +359,24 @@ class Tags_Poster
 		);
 	}
 
-	function removeTagsFromTopic($id_topic)
+	function removeTagsFromTarget($id_target)
 	{
 		global $modSettings;
 
 		$db = database();
 
-		$id_topic = (int) $id_topic;
+		$id_target = (int) $id_target;
 
-		if (empty($id_topic))
+		if (empty($id_target))
 			return false;
 
 		$request = $db->query('', '
 			SELECT id_term
 			FROM {db_prefix}tag_relation
-			WHERE id_target = {int:current_topic}
+			WHERE id_target = {int:id_target}
 				AND type = {int:tagger}',
 			array(
-				'current_topic' => $id_topic,
+				'id_target' => $id_target,
 				'tagger' => $this->id_tagger,
 			)
 		);
@@ -367,11 +403,11 @@ class Tags_Poster
 				UPDATE {db_prefix}tag_relation
 				SET times_mentioned = times_mentioned - 1
 				WHERE id_term IN ({array_int:tag_ids})
-					AND id_target = {int:id_topic}
+					AND id_target = {int:id_target}
 					AND type = {int:tagger}',
 				array(
 					'tag_ids' => $tags,
-					'id_topic' => $id_topic,
+					'id_target' => $id_target,
 					'tagger' => $this->id_tagger,
 				)
 			);
@@ -381,19 +417,19 @@ class Tags_Poster
 			$db->query('', '
 				DELETE
 				FROM {db_prefix}tag_relation
-				WHERE id_target = {int:current_topic}
+				WHERE id_target = {int:id_target}
 					AND type = {int:tagger}',
 				array(
-					'current_topic' => $id_topic,
+					'id_target' => $id_target,
 					'tagger' => $this->id_tagger,
 				)
 			);
 		}
 	}
 
-	function purgeTopicTags($id_topic)
+	function purgeTargetTags($id_target)
 	{
-		if (empty($id_topic))
+		if (empty($id_target))
 			return;
 
 		$db = database();
@@ -401,31 +437,31 @@ class Tags_Poster
 		$db->query('', '
 			DELETE
 			FROM {db_prefix}tag_relation
-			WHERE id_target = {int:current_topic}
+			WHERE id_target = {int:current_target}
 				AND type = {int:tagger}
 				AND times_mentioned < 1',
 			array(
-				'current_topic' => $id_topic,
+				'current_target' => $id_target,
 				'tagger' => $this->id_tagger,
 			)
 		);
 	}
 
-	function removeTag($tag_id, $topic_id = false)
+	function removeTag($tag_id, $id_target = false)
 	{
 		$db = database();
 
-		if ($topic_id !== false)
+		if ($id_target !== false)
 		{
 			$db->query('', '
 				DELETE
 				FROM {db_prefix}tag_relation
 				WHERE id_term = {int:current_tag}
-					AND id_target = {int:current_topic}
+					AND id_target = {int:current_target}
 					AND type = {int:tagger}',
 				array(
 					'current_tag' => $tag_id,
-					'current_topic' => $topic_id,
+					'current_target' => $id_target,
 					'tagger' => $this->id_tagger,
 				)
 			);
@@ -473,7 +509,7 @@ class Tags_Poster
 		}
 	}
 
-	function dropTagsFromTopic($tags_id, $topic_id)
+	function dropTagsFromTarget($tags_id, $id_target)
 	{
 		$db = database();
 
@@ -481,11 +517,11 @@ class Tags_Poster
 			UPDATE {db_prefix}tag_relation
 			SET times_mentioned = CASE WHEN times_mentioned <= 1 THEN 0 ELSE times_mentioned - 1 END
 			WHERE id_term IN ({arra_int:tags})
-				AND id_target = {int:current_topic}
+				AND id_target = {int:current_target}
 				AND type = {int:tagger}',
 			array(
-				'tags' => $tag_id,
-				'current_topic' => $topic_id,
+				'tags' => (array) $tags_id,
+				'current_target' => $id_target,
 				'tagger' => $this->id_tagger,
 			)
 		);
@@ -538,7 +574,7 @@ class Tags_Poster
 		return $ids;
 	}
 
-	function countTaggedTopics($tag_id)
+	function countTaggedTargets($tag_id)
 	{
 		$db = database();
 
@@ -546,7 +582,7 @@ class Tags_Poster
 		$request = $db->query('', '
 			SELECT times_used
 			FROM {db_prefix}tag_terms as tt
-			LEFT JOIN {db_prefix}tag_relation as tr ON (tt.id_term = tr.id_term)
+				LEFT JOIN {db_prefix}tag_relation as tr ON (tt.id_term = tr.id_term)
 			WHERE tr.id_target = {int:current_tag}
 				AND type = {int:tagger}',
 			array(
@@ -554,7 +590,27 @@ class Tags_Poster
 				'tagger' => $this->id_tagger,
 			)
 		);
-		list($count) = $db->fetch_row($request);
+		list ($count) = $db->fetch_row($request);
+		$db->free_result($request);
+
+		return $count;
+	}
+
+	function countTag($tag_id)
+	{
+		$db = database();
+
+		// @todo this should become a column in the tag_terms table, but since it implies also moderation, I'll do it later
+		$request = $db->query('', '
+			SELECT SUM(times_used)
+			FROM {db_prefix}tag_terms as tt
+				LEFT JOIN {db_prefix}tag_relation as tr ON (tt.id_term = tr.id_term)
+			WHERE tr.id_target = {int:current_tag}',
+			array(
+				'current_tag' => $tag_id,
+			)
+		);
+		list ($count) = $db->fetch_row($request);
 		$db->free_result($request);
 
 		return $count;
