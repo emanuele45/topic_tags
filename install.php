@@ -144,6 +144,7 @@ function setup_hooks ()
 						'name' => 'id_term',
 						'type' => 'int',
 						'unsigned' => true,
+						'size' => 10,
 						'auto' => true
 				),
 				array(
@@ -157,12 +158,14 @@ function setup_hooks ()
 						'name' => 'type',
 						'type' => 'tinyint',
 						'unsigned' => true,
+						'size' => 2,
 						'default' => 1
 				),
 				array(
 						'name' => 'times_mentioned',
 						'type' => 'smallint',
 						'unsigned' => true,
+						'size' => 5,
 						'default' => 0
 				),
 			),
@@ -187,6 +190,7 @@ function setup_hooks ()
 						'name' => 'id_term',
 						'type' => 'int',
 						'unsigned' => true,
+						'size' => 10,
 						'auto' => true
 				),
 				array(
@@ -199,6 +203,7 @@ function setup_hooks ()
 						'name' => 'times_used',
 						'type' => 'smallint',
 						'unsigned' => true,
+						'size' => 5,
 						'default' => 0
 				),
 			),
@@ -212,6 +217,31 @@ function setup_hooks ()
 					'name' => 'tag_text',
 					'type' => 'unique',
 					'columns' => array('tag_text'),
+				),
+			)
+		);
+
+		$db_table->db_create_table(
+			'{db_prefix}log_tags',
+			array(
+				array(
+						'name' => 'id_term',
+						'type' => 'int',
+						'unsigned' => true,
+						'size' => 10
+				),
+				array(
+						'name' => 'time_used',
+						'type' => 'int',
+						'unsigned' => true,
+						'size' => 10
+				),
+			),
+			array(
+				array(
+					'name' => 'log_tags',
+					'type' => 'key',
+					'columns' => array('id_term', 'time_used'),
 				),
 			)
 		);
