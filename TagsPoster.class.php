@@ -29,7 +29,7 @@ class Tags_Poster
 
 		// Do any of them already exist? (And grab all the ids at the same time)
 		$tag_ids = $this->createTags($possible_tags);
-	print_r($tag_ids);
+
 		if (!empty($tag_ids))
 			$this->addTags($topic_id, $tag_ids);
 	}
