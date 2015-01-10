@@ -36,7 +36,7 @@ $(document).ready(function() {
 
 				$.ajax({
 					type: "POST",
-					url: elk_prepareScriptUrl(elk_scripturl) + 'action=tags;sa=add;api;target=' + target_id,
+					url: elk_prepareScriptUrl(elk_scripturl) + 'action=tagsman;sa=add;api;target=' + target_id,
 					data: data,
 					success: function(request) {
 						if (typeof request == 'object')
@@ -179,7 +179,7 @@ function init_tags_autoSuggest(listItems)
 		iMinimumSearchChars: 2,
 		sSuggestId: 'input_tags', // ???
 		sControlId: 'input_tags',
-		sRetrieveURL: '%scripturl%action=tags;sa=search;search=%search%;%sessionVar%=%sessionID%;api;time=%time%',
+		sRetrieveURL: '%scripturl%action=tagsman;sa=search;search=%search%;%sessionVar%=%sessionID%;api;time=%time%',
 		bItemList: true,
 		sPostName: 'tags_autosuggest',
 		sURLMask: 'action=tags;tag=%item_id%',
