@@ -16,21 +16,29 @@
 	<version>0.0.1</version>
 	<type>modification</type>
 	<install for="1.0 - 1.0.99">
+		<require-file name="Tags.integrate.php" destination="SOURCEDIR" />
 		<require-file name="Tags.controller.php" destination="CONTROLLERDIR" />
+		<require-file name="ManageTags.controller.php" destination="ADMINDIR" />
 		<require-file name="Tags.subs.php" destination="SUBSDIR" />
-		<require-file name="Tags.template.php" destination="$themedir" />
-		<require-file name="Tags.english.php" destination="$languagedir" />
-		<require-file name="tags.css" destination="$themedir/css" />
-		<require-file name="tags.js" destination="$themedir/script" />
-		<hook hook="integrate_mark_read_button" file="SOURCEDIR/subs/TabularCategories.subs.php" function="tabular_categories" />
+		<require-file name="TagsPoster.class.php" destination="SUBSDIR" />
+		<require-file name="TagsStyler.class.php" destination="SUBSDIR" />
+		<require-file name="Tags.template.php" destination="THEMEDIR" />
+		<require-file name="Tags.english.php" destination="LANGUAGEDIR/english" />
+		<require-file name="tags.css" destination="THEMEDIR/css" />
+		<require-file name="tags.js" destination="THEMEDIR/script" />
+		<code>install.php</code>
 	</install>
 	<uninstall for="1.0 - 1.0.99">
+		<remove-file name="SOURCEDIR/Tags.integrate.php" />
 		<remove-file name="CONTROLLERDIR/Tags.controller.php" />
+		<remove-file name="ADMINDIR/ManageTags.controller.php" />
 		<remove-file name="SUBSDIR/Tags.subs.php" />
-		<remove-file name="$themedir/Tags.template.php" />
-		<remove-file name="$languagedir/Tags.english.php" />
-		<remove-file name="$themedir/css/tags.css" />
-		<remove-file name="$themedir/script/tags.js" />
-		<hook reverse="true" hook="integrate_mark_read_button" file="SOURCEDIR/subs/TabularCategories.subs.php" function="tabular_categories" />
+		<remove-file name="SUBSDIR/TagsPoster.class.php" />
+		<remove-file name="SUBSDIR/TagsStyler.class.php" />
+		<remove-file name="THEMEDIR/Tags.template.php" />
+		<remove-file name="LANGUAGEDIR/english/Tags.english.php" />
+		<remove-file name="THEMEDIR/css/tags.css" />
+		<remove-file name="THEMEDIR/script/tags.js" />
+		<code>install.php</code>
 	</uninstall>
 </package-info>
