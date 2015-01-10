@@ -101,10 +101,10 @@ class Tags_Integrate
 			return;
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster();
+		$poster = new Tags_Poster(1);
 
 		if (!empty($modSettings['hashtag_mode']))
-			return $poster->posting_hashed_tags($msgOptions['body'], $topicOptions['id']);
+			return $poster->postHashed($msgOptions['body'], $topicOptions['id']);
 
 		if (!tagsAllowed(true))
 			return;
@@ -130,8 +130,8 @@ class Tags_Integrate
 			return;
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster();
-		$poster->posting_hashed_tags($msgOptions['body'], $topicOptions['id']);
+		$poster = new Tags_Poster(1);
+		$poster->postHashed($msgOptions['body'], $topicOptions['id']);
 	}
 
 	public static function modify_post($messages_columns, $update_parameters, $msgOptions, $topicOptions, $posterOptions, $messageInts)
@@ -142,7 +142,7 @@ class Tags_Integrate
 			return;
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster();
+		$poster = new Tags_Poster(1);
 		$possible_tags = $poster->cleanHashedTags($msgOptions['body']);
 
 		$tag_ids = $poster->createTags($possible_tags);
@@ -168,7 +168,7 @@ class Tags_Integrate
 			return;
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster();
+		$poster = new Tags_Poster(1);
 		$possible_tags = $poster->cleanPostedTags();
 
 		// Remove goes before the empty check because if you have cleaned up the
@@ -221,7 +221,7 @@ class Tags_Integrate
 			return;
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster();
+		$poster = new Tags_Poster(1);
 
 		$output['body'] = $poster->tags_protect_hashes($output['body']);
 	}
@@ -230,7 +230,7 @@ class Tags_Integrate
 	{
 		require_once(SUBSDIR . '/Messages.subs.php');
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster();
+		$poster = new Tags_Poster(1);
 
 		$msg_info = basicMessageInfo($message, false, true);
 		$tags = $poster->cleanHashedTags($msg_info['body']);

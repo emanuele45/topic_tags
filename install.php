@@ -127,7 +127,7 @@ function install_mod ()
 
 function setup_hooks ()
 {
-	global $context, $hooks, $smcFunc;
+	global $context, $hooks;
 
 	$integration_function = empty($context['uninstalling']) ? 'add_integration_function' : 'remove_integration_function';
 	foreach ($hooks as $hook)

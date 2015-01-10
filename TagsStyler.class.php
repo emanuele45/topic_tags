@@ -25,7 +25,7 @@ class Tags_Styler
 
 			loadJavaScriptFile('suggest.js');
 			require_once(SUBSDIR . '/TagsPoster.class.php');
-			$poster = new Tags_Poster();
+			$poster = new Tags_Poster(1);
 
 			$context['current_tags'] = $poster->topicTags($topic, true);
 			if (!empty($context['current_tags']))
@@ -46,7 +46,7 @@ class Tags_Styler
 		Template_Layers::getInstance()->addEnd('boardindex_tag_cloud');
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster();
+		$poster = new Tags_Poster(1);
 		$this->styleTags($poster->mostUsedTags());
 	}
 
@@ -58,7 +58,7 @@ class Tags_Styler
 			Template_Layers::getInstance()->addBefore('topic_tag_cloud', 'pages_and_buttons');
 
 			require_once(SUBSDIR . '/TagsPoster.class.php');
-			$poster = new Tags_Poster();
+			$poster = new Tags_Poster(1);
 			$context['tags_list'] = $poster->topicTags($topic);
 			$this->styleTags($context['tags_list'], $topic);
 	}

@@ -65,7 +65,7 @@ function recountTags()
 					break;
 
 				$next_hstart = $row['id_msg'];
-				$this->posting_hashed_tags($row['body'], $row['id_topic']);
+				$this->postHashed($row['body'], $row['id_topic']);
 			}
 			$db->free_result($request);
 
