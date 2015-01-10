@@ -247,7 +247,7 @@ class Tags_Controller extends Action_Controller
 			'fake_ascending' => $fake_ascending
 		);
 
-		$topics_info = $this->_poster->tagsIndexTopics($this->_id, $user_info['id'], $start, $this->_topics_per_page, $this->_sort_method, $sort_column, $indexOptions);
+		$topics_info = tagsIndexTopics($this->_id, $user_info['id'], $start, $this->_topics_per_page, $this->_sort_method, $sort_column, $indexOptions);
 
 		// Prepare for links to guests (for search engines)
 		$context['pageindex_multiplier'] = empty($modSettings['disableCustomPerPage']) && !empty($options['messages_per_page']) ? $options['messages_per_page'] : $modSettings['defaultMaxMessages'];
