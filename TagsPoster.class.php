@@ -13,6 +13,8 @@ if (!defined('ELK'))
 
 class Tags_Poster
 {
+	const TYPE_TOPIC = 1;
+
 	function tags_new_topics($msgOptions, $topicOptions, $posterOptions)
 	{
 		$possible_tags = $this->cleanPostedTags();
@@ -142,9 +144,11 @@ class Tags_Poster
 			SELECT tt.id_term, tt.tag_text, tt.times_used
 			FROM {db_prefix}tag_terms as tt
 			LEFT JOIN {db_prefix}tag_relation as tr ON (tr.id_term = tt.id_term)
-			WHERE tr.id_topic = {int:current_topic}',
+			WHERE tr.id_target = {int:current_topic}
+				AND type = {int:topics}',
 			array(
-				'current_topic' => $topic_id
+				'current_topic' => $topic_id,
+				'topics' => Tags_Poster::TYPE_TOPIC,
 			)
 		);
 		$tags = array();
@@ -262,10 +266,12 @@ class Tags_Poster
 			SELECT id_term
 			FROM {db_prefix}tag_relation
 			WHERE id_term IN ({array_int:tag_ids})
-				AND id_topic = {int:id_topic}',
+				AND id_target = {int:id_topic}
+				AND type = {int:topic}',
 			array(
 				'tag_ids' => $tag_ids,
 				'id_topic' => $topic,
+				'topic' => Tags_Poster::TYPE_TOPIC,
 			)
 		);
 		$exiting_tags = array();
@@ -286,10 +292,12 @@ class Tags_Poster
 				UPDATE {db_prefix}tag_relation
 				SET times_mentioned = times_mentioned + 1
 				WHERE id_term IN ({array_int:tag_ids})
-					AND id_topic = {int:id_topic}',
+					AND id_target = {int:id_topic}
+					AND type = {int:topic}',
 				array(
 					'tag_ids' => $tag_ids,
 					'id_topic' => $topic,
+					'topic' => Tags_Poster::TYPE_TOPIC,
 				)
 			);
 		}
@@ -322,9 +330,11 @@ class Tags_Poster
 		$request = $db->query('', '
 			SELECT id_term
 			FROM {db_prefix}tag_relation
-			WHERE id_topic = {int:current_topic}',
+			WHERE id_target = {int:current_topic}
+				AND type = {int:topic}',
 			array(
-				'current_topic' => $id_topic
+				'current_topic' => $id_topic,
+				'topic' => Tags_Poster::TYPE_TOPIC,
 			)
 		);
 		$tags = array();
@@ -350,10 +360,12 @@ class Tags_Poster
 				UPDATE {db_prefix}tag_relation
 				SET times_mentioned = times_mentioned - 1
 				WHERE id_term IN ({array_int:tag_ids})
-					AND id_topic = {int:id_topic}',
+					AND id_target = {int:id_topic}
+					AND type = {int:topic}',
 				array(
 					'tag_ids' => $tags,
 					'id_topic' => $id_topic,
+					'topic' => Tags_Poster::TYPE_TOPIC,
 				)
 			);
 		}
@@ -362,9 +374,11 @@ class Tags_Poster
 			$db->query('', '
 				DELETE
 				FROM {db_prefix}tag_relation
-				WHERE id_topic = {int:current_topic}',
+				WHERE id_target = {int:current_topic}
+					AND type = {int:topic}',
 				array(
-					'current_topic' => $id_topic
+					'current_topic' => $id_topic,
+					'topic' => Tags_Poster::TYPE_TOPIC,
 				)
 			);
 		}
@@ -380,10 +394,12 @@ class Tags_Poster
 		$db->query('', '
 			DELETE
 			FROM {db_prefix}tag_relation
-			WHERE id_topic = {int:current_topic}
+			WHERE id_target = {int:current_topic}
+				AND type = {int:topic}
 				AND times_mentioned < 1',
 			array(
-				'current_topic' => $id_topic
+				'current_topic' => $id_topic,
+				'topic' => Tags_Poster::TYPE_TOPIC,
 			)
 		);
 	}
@@ -398,10 +414,12 @@ class Tags_Poster
 				DELETE
 				FROM {db_prefix}tag_relation
 				WHERE id_term = {int:current_tag}
-					AND id_topic = {int:current_topic}',
+					AND id_target = {int:current_topic}
+					AND type = {int:topic}',
 				array(
 					'current_tag' => $tag_id,
-					'current_topic' => $topic_id
+					'current_topic' => $topic_id,
+					'topic' => Tags_Poster::TYPE_TOPIC,
 				)
 			);
 
@@ -456,10 +474,12 @@ class Tags_Poster
 			UPDATE {db_prefix}tag_relation
 			SET times_mentioned = CASE WHEN times_mentioned <= 1 THEN 0 ELSE times_mentioned - 1 END
 			WHERE id_term IN ({arra_int:tags})
-				AND id_topic = {int:current_topic}',
+				AND id_target = {int:current_topic}
+				AND type = {int:topic}',
 			array(
 				'tags' => $tag_id,
 				'current_topic' => $topic_id,
+				'topic' => Tags_Poster::TYPE_TOPIC,
 			)
 		);
 	}
@@ -520,9 +540,11 @@ class Tags_Poster
 			SELECT times_used
 			FROM {db_prefix}tag_terms as tt
 			LEFT JOIN {db_prefix}tag_relation as tr ON (tt.id_term = tr.id_term)
-			WHERE tr.id_topic = {int:current_tag}',
+			WHERE tr.id_target = {int:current_tag}
+				AND type = {int:topic}',
 			array(
 				'current_tag' => $tag_id,
+				'topic' => Tags_Poster::TYPE_TOPIC,
 			)
 		);
 		list($count) = $db->fetch_row($request);

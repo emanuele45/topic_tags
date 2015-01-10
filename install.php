@@ -135,9 +135,86 @@ function setup_hooks ()
 
 	if (empty($context['uninstalling']))
 	{
-	}
-	else
-	{
+		$db_table = db_table();
+
+		$db_table->db_create_table(
+			'{db_prefix}tag_relation',
+			array(
+				array(
+						'name' => 'id_term',
+						'type' => 'int',
+						'unsigned' => true,
+						'auto' => true
+				),
+				array(
+						'name' => 'id_target',
+						'type' => 'mediumint',
+						'unsigned' => true,
+						'size' => 8,
+						'default' => 0
+				),
+				array(
+						'name' => 'type',
+						'type' => 'tinyint',
+						'unsigned' => true,
+						'default' => 1
+				),
+				array(
+						'name' => 'times_mentioned',
+						'type' => 'smallint',
+						'unsigned' => true,
+						'default' => 0
+				),
+			),
+			array(
+				array(
+					'name' => 'id_term',
+					'type' => 'primary',
+					'columns' => array('id_term'),
+				),
+				array(
+					'name' => 'id_target',
+					'type' => 'unique',
+					'columns' => array('id_target', 'type'),
+				),
+			)
+		);
+
+		$db_table->db_create_table(
+			'{db_prefix}tag_terms',
+			array(
+				array(
+						'name' => 'id_term',
+						'type' => 'int',
+						'unsigned' => true,
+						'auto' => true
+				),
+				array(
+						'name' => 'tag_text',
+						'type' => 'varchar',
+						'size' => 100,
+						'default' => ''
+				),
+				array(
+						'name' => 'times_used',
+						'type' => 'smallint',
+						'unsigned' => true,
+						'default' => 0
+				),
+			),
+			array(
+				array(
+					'name' => 'id_term',
+					'type' => 'primary',
+					'columns' => array('id_term'),
+				),
+				array(
+					'name' => 'tag_text',
+					'type' => 'unique',
+					'columns' => array('tag_text'),
+				),
+			)
+		);
 	}
 
 
