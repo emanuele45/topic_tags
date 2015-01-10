@@ -20,14 +20,14 @@ class Tags_Poster
 		$this->tagger = (int) $id_action;
 	}
 
-	public function tags_new_topics($msgOptions, $topicOptions, $posterOptions)
+	public function postNewTags($tags, $target_id)
 	{
-		$possible_tags = $this->cleanPostedTags();
+		$possible_tags = $this->cleanPostedTags($tags);
 
 		// Do any of them already exist? (And grab all the ids at the same time)
 		$tag_ids = $this->createTags($possible_tags);
 
-		$this->addTags($topicOptions['id'], $tag_ids);
+		$this->addTags($target_id, $tag_ids);
 	}
 
 	public function postHashed($body, $id_target)
@@ -121,17 +121,17 @@ class Tags_Poster
 		return $body;
 	}
 
-	function cleanPostedTags()
+	function cleanPostedTags($tags)
 	{
-		if (empty($_POST['tags']))
+		if (empty($tags))
 			return array();
 
-		$possible_tags = explode(',', $_POST['tags']);
+		$possible_tags = explode(',', $tags);
 
 		// a bit of cleanup
 		foreach ($possible_tags as &$tag)
 			$tag = trim(Util::htmlspecialchars($tag));
-		$possible_tags = array_unique($possible_tags);
+		$possible_tags = array_filter(array_unique($possible_tags));
 
 		return $possible_tags;
 	}

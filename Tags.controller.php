@@ -566,7 +566,7 @@ class Tags_Controller extends Action_Controller
 		if (!$this->_init_api())
 			return;
 
-		$tags_text = $this->_poster->cleanPostedTags();
+		$tags_text = $this->_poster->cleanPostedTags($_POST['tags']);
 
 		if (empty($tags_text))
 		{

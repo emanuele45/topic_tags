@@ -118,7 +118,7 @@ class Tags_Integrate
 		// Since this is only for new topics I can just check that
 		if (!empty($_POST['tags']))
 		{
-			$poster->tags_new_topics();
+			$poster->postNewTags($_POST['tags'], $topicOptions['id']);
 		}
 	}
 
@@ -169,7 +169,7 @@ class Tags_Integrate
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
 		$poster = new Tags_Poster(1);
-		$possible_tags = $poster->cleanPostedTags();
+		$possible_tags = $poster->cleanPostedTags($_POST['tags']);
 
 		// Remove goes before the empty check because if you have cleaned up the
 		// input you want to remove everything
