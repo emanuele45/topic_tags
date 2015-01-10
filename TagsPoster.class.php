@@ -13,11 +13,11 @@ if (!defined('ELK'))
 
 class Tags_Poster
 {
-	protected $tagger = 1;
+	protected $id_tagger = 1;
 
 	public function __construct($id_action)
 	{
-		$this->tagger = (int) $id_action;
+		$this->id_tagger = (int) $id_action;
 	}
 
 	public function postNewTags($tags, $target_id)
@@ -85,9 +85,11 @@ class Tags_Poster
 			return array();
 	}
 
-	function tags_protect_hashes($body)
+	function tags_protect_hashes($body, $id_target)
 	{
-		global $modSettings, $context, $topic, $scripturl, $links_callback, $links_callback_counter;
+		global $modSettings, $context, $target, $scripturl, $links_callback, $links_callback_counter;
+
+		$target = $id_target;
 
 		// Protects hashes into links to avoid broken HTML
 		// ...it would be cool to have hashes linked even inside links though...
@@ -106,11 +108,11 @@ class Tags_Poster
 			$find[] = '~(\s|<br />|^)#(' . preg_quote($tag['tag_text']) . ')(\s|<br />|$)~';
 
 		$tmp = preg_replace_callback($find, create_function('$match', '
-			global $context, $topic, $scripturl;
+			global $context, $target, $scripturl;
 			if (!empty($match[2]) && isset($context[\'tags_list\'][\'tags\'][$match[2]]))
 			{
 				$tag = $context[\'tags_list\'][\'tags\'][$match[2]];
-				return $match[1] . \'<a data-topic="\' . $topic . \'" id="tag_\' . $tag[\'id_term\'] . \'" class="msg_tagsize\' . round(10 * $tag[\'times_used\'] / $context[\'tags_list\'][\'max_used\']) . \'" href="\' . $scripturl . \'?action=tags;tag=\' . $tag[\'id_term\'] . \'.0">#\' . $tag[\'tag_text\'] . \'</a>\' . $match[3];
+				return $match[1] . \'<a data-target="\' . $target . \'" id="tag_\' . $tag[\'id_term\'] . \'" class="msg_tagsize\' . round(10 * $tag[\'times_used\'] / $context[\'tags_list\'][\'max_used\']) . \'" href="\' . $scripturl . \'?action=tags;tag=\' . $tag[\'id_term\'] . \'.0">#\' . $tag[\'tag_text\'] . \'</a>\' . $match[3];
 			}'), $tmp);
 
 		if (!empty($links_callback))
@@ -153,7 +155,7 @@ class Tags_Poster
 				AND type = {int:tagger}',
 			array(
 				'current_topic' => $topic_id,
-				'tagger' => $this->tagger,
+				'tagger' => $this->id_tagger,
 			)
 		);
 		$tags = array();
@@ -257,7 +259,7 @@ class Tags_Poster
 		return $tags_id;
 	}
 
-	function addTags($topic, $tag_ids)
+	function addTags($id_target, $tag_ids)
 	{
 		global $modSettings;
 
@@ -265,18 +267,18 @@ class Tags_Poster
 
 		$inserts = array();
 		foreach ($tag_ids as $tag)
-			$inserts[] = array($tag, $topic);
+			$inserts[] = array($tag, $id_target);
 
 		$request = $db->query('', '
 			SELECT id_term
 			FROM {db_prefix}tag_relation
 			WHERE id_term IN ({array_int:tag_ids})
-				AND id_target = {int:id_topic}
+				AND id_target = {int:id_target}
 				AND type = {int:tagger}',
 			array(
 				'tag_ids' => $tag_ids,
-				'id_topic' => $topic,
-				'tagger' => $this->tagger,
+				'id_target' => $id_target,
+				'tagger' => $this->id_tagger,
 			)
 		);
 		$exiting_tags = array();
@@ -286,9 +288,9 @@ class Tags_Poster
 
 		$db->insert('ignore',
 			'{db_prefix}tag_relation',
-			array('id_term' => 'int', 'id_topic' => 'int'),
+			array('id_term' => 'int', 'id_target' => 'int'),
 			$inserts,
-			array('id_term', 'id_topic')
+			array('id_term', 'id_target')
 		);
 
 		if (!empty($modSettings['hashtag_mode']))
@@ -297,12 +299,12 @@ class Tags_Poster
 				UPDATE {db_prefix}tag_relation
 				SET times_mentioned = times_mentioned + 1
 				WHERE id_term IN ({array_int:tag_ids})
-					AND id_target = {int:id_topic}
+					AND id_target = {int:id_target}
 					AND type = {int:tagger}',
 				array(
 					'tag_ids' => $tag_ids,
-					'id_topic' => $topic,
-					'tagger' => $this->tagger,
+					'id_target' => $id_target,
+					'tagger' => $this->id_tagger,
 				)
 			);
 		}
@@ -339,7 +341,7 @@ class Tags_Poster
 				AND type = {int:tagger}',
 			array(
 				'current_topic' => $id_topic,
-				'tagger' => $this->tagger,
+				'tagger' => $this->id_tagger,
 			)
 		);
 		$tags = array();
@@ -370,7 +372,7 @@ class Tags_Poster
 				array(
 					'tag_ids' => $tags,
 					'id_topic' => $id_topic,
-					'tagger' => $this->tagger,
+					'tagger' => $this->id_tagger,
 				)
 			);
 		}
@@ -383,7 +385,7 @@ class Tags_Poster
 					AND type = {int:tagger}',
 				array(
 					'current_topic' => $id_topic,
-					'tagger' => $this->tagger,
+					'tagger' => $this->id_tagger,
 				)
 			);
 		}
@@ -404,7 +406,7 @@ class Tags_Poster
 				AND times_mentioned < 1',
 			array(
 				'current_topic' => $id_topic,
-				'tagger' => $this->tagger,
+				'tagger' => $this->id_tagger,
 			)
 		);
 	}
@@ -424,7 +426,7 @@ class Tags_Poster
 				array(
 					'current_tag' => $tag_id,
 					'current_topic' => $topic_id,
-					'tagger' => $this->tagger,
+					'tagger' => $this->id_tagger,
 				)
 			);
 
@@ -484,7 +486,7 @@ class Tags_Poster
 			array(
 				'tags' => $tag_id,
 				'current_topic' => $topic_id,
-				'tagger' => $this->tagger,
+				'tagger' => $this->id_tagger,
 			)
 		);
 	}
@@ -549,7 +551,7 @@ class Tags_Poster
 				AND type = {int:tagger}',
 			array(
 				'current_tag' => $tag_id,
-				'tagger' => $this->tagger,
+				'tagger' => $this->id_tagger,
 			)
 		);
 		list($count) = $db->fetch_row($request);

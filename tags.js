@@ -19,7 +19,7 @@ $(document).ready(function() {
 	if (tags_allowed_add)
 	{
 		var $container = $('#show_tags'),
-			topic_id = $container.data('topic');
+			target_id = $container.data('target');
 
 		var $add = $('<a>').addClass('tag_add').attr('href', '#').click('bind', function(event) {
 			var $add_form = $('<div>').addClass('tags_ajax_form roundframe');
@@ -36,7 +36,7 @@ $(document).ready(function() {
 
 				$.ajax({
 					type: "POST",
-					url: elk_prepareScriptUrl(elk_scripturl) + 'action=tags;sa=add;api;topic=' + topic_id,
+					url: elk_prepareScriptUrl(elk_scripturl) + 'action=tags;sa=add;api;target=' + target_id,
 					data: data,
 					success: function(request) {
 						if (typeof request == 'object')
@@ -68,7 +68,7 @@ $(document).ready(function() {
 											id: 'tag_' + tag_id,
 											class: tagsize,
 											href: elk_scripturl + '?action=tags;tag=' + tag_id + '.0'
-										}).data('topic', topic_id).text(tag_text));
+										}).data('target', target_id).text(tag_text));
 
 										if ($last_tag != null)
 											$last_tag.parent().parent().after($new_tag);

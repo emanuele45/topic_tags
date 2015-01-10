@@ -223,7 +223,7 @@ class Tags_Integrate
 		require_once(SUBSDIR . '/TagsPoster.class.php');
 		$poster = new Tags_Poster(1);
 
-		$output['body'] = $poster->tags_protect_hashes($output['body']);
+		$output['body'] = $poster->tags_protect_hashes($output['body'], $topic);
 	}
 
 	public static function remove_message($message)
