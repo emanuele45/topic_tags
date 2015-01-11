@@ -43,6 +43,7 @@ class Tags_Controller extends Action_Controller
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
 		require_once(SUBSDIR . '/TagsStyler.class.php');
+		require_once(SUBSDIR . '/TagsInfo.class.php');
 		require_once(SUBSDIR . '/Tags.subs.php');
 
 		$this->_poster = new Tags_Poster('topics');
@@ -58,7 +59,8 @@ class Tags_Controller extends Action_Controller
 		if (empty($this->_id))
 			fatal_lang_error('no_such_tag', false);
 
-		$details = $this->_poster->tagDetails($this->_id);
+		$info = new Tags_Info();
+		$details = $info->tagDetails($this->_id);
 
 		if (empty($details) || empty($details['tag_text']))
 			fatal_lang_error('no_such_tag', false);

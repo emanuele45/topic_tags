@@ -19,7 +19,7 @@ class Tags_Integrate
 {
 	protected static function init($perm = false)
 	{
-		global $modSettings;
+		global $modSettings, $context;
 
 		if (empty($modSettings['tags_enabled']))
 			return false;
@@ -28,6 +28,9 @@ class Tags_Integrate
 
 		if ($perm && !tagsAllowed(true))
 			return false;
+
+		if (!isset($context['tags']))
+			$context['tags'] = array();
 
 		return true;
 	}
@@ -55,13 +58,23 @@ class Tags_Integrate
 
 	public static function display_topic($topicinfo)
 	{
+		global $txt, ;
+
 		if (!self::init())
 			return;
 
-		
+		require_once(SUBSDIR . '/TagsPoster.class.php');
+		self::$poster = new Tags_Poster();
+
+		if (!empty($modSettings['hashtag_mode']))
+		{
+			add_integration_function('integrate_display_topic', 'Tags_Integrate::display_topic', false, false);
+			$context['current_tags'] = self::$poster->getTargetTags($topic, true);
+		}
+
 		require_once(SUBSDIR . '/TagsStyler.class.php');
-		$styler = new Tags_Styler();
-		$styler->tags_DisplayCloud();
+		self::$styler = new Tags_Styler();
+		self::$styler->displayTargetCloud('topics', $topicinfo['id_topic'], 'pages_and_buttons', $txt['this_topic_tags']);
 	}
 
 	public static function load_permissions(&$permissionGroups, &$permissionList, &$leftPermissionGroups, &$hiddenPermissions, &$relabelPermissions)
@@ -214,19 +227,14 @@ class Tags_Integrate
 	{
 		global $modSettings, $context, $topic;
 
-		if (empty($modSettings['tags_enabled']) || empty($modSettings['hashtag_mode']))
-			return;
-
-		$poster = new Tags_Poster('topics');
-
 		$context['current_tags'] = $poster->getTargetTags($topic, true);
 		if (empty($context['current_tags']))
 			return;
 
-		require_once(SUBSDIR . '/TagsPoster.class.php');
-		$poster = new Tags_Poster('topics');
+		require_once(SUBSDIR . '/TagsStyler.class.php');
+		$styler = new Tags_Styler();
 
-		$output['body'] = $poster->createHashLinks($output['body'], $topic);
+		$output['body'] = $styler->createHashLinks($output['body'], $topic);
 	}
 
 	public static function remove_message($message)

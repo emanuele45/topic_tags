@@ -29,9 +29,9 @@ function template_tags_posting_above()
 		</dl>';
 }
 
-function template_topic_tag_cloud_above()
+function template_tag_cloud_above()
 {
-	template_create_tag_cloud('this_topic_tags');
+	template_create_tag_cloud();
 }
 
 function template_boardindex_tag_cloud_above()
@@ -39,16 +39,17 @@ function template_boardindex_tag_cloud_above()
 	template_create_tag_cloud('most_frequent_tags');
 }
 
-function template_create_tag_cloud($text)
+function template_create_tag_cloud($text = null)
 {
 	global $context, $txt, $settings, $options;
 
 	if (!empty($context['current_tags']))
 	{
+		// @todo cleaup the title at some point
 		echo '
 		<div class="cat_bar">
 			<h3 class="catbg">
-				', (empty($text) ? $txt['tags'] : $txt[$text]), '
+				', (empty($text) ? (empty($context['tags']['cloud_title']) ? $txt['tags'] : $context['tags']['cloud_title']) : $txt[$text]), '
 			<img id="tagsupshrink" src="', $settings['images_url'], '/collapse.png" alt="*" title="', $txt['hide'], '" style="vertical-align: bottom; cursor: pointer;"/>
 			</h3>
 		</div>

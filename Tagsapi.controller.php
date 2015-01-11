@@ -50,7 +50,8 @@ class Tagsapi_Controller extends Action_Controller
 		if (!$this->_poster->canAccess($this->_id))
 			fatal_lang_error('no_such_tag', false);
 
-		$details = $this->_poster->tagDetails($this->_id);
+		$info = new Tags_Info();
+		$details = $info->tagDetails($this->_id);
 
 		if (empty($details) || empty($details['tag_text']))
 			fatal_lang_error('no_such_tag', false);

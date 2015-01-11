@@ -21,6 +21,8 @@ class Tags_Poster
 		$this->initTagger($action);
 		$this->id_tagger = $this->tagger->getTypeId();
 		$this->tagger_name = $action;
+		require_once(SUBSDIR . '/TagsInfo.class.php');
+		$this->_info = new Tags_Info();
 	}
 
 	public function canAccess($id_target)
@@ -114,47 +116,6 @@ class Tags_Poster
 			return array();
 	}
 
-	public function createHashLinks($body, $id_target)
-	{
-		global $context;
-
-		// Protects hashes into links to avoid broken HTML
-		// ...it would be cool to have hashes linked even inside links though...
-		$links_callback_counter = 0;
-		$links_callback = array();
-		$type = $this->tagger_name;
-
-		$tmp = preg_replace_callback('~(<a[^>]*>[^<]*<\/a>)~', function ($match) use (&$links_callback, &$links_callback_counter)
-		{
-			$links_callback['replace'][$links_callback_counter] = $match[0];
-			$links_callback['find'][$links_callback_counter] = '<a~~~~~~~>' . ($links_callback_counter++) . '</a~~~~~~~>';
-
-			return $links_callback['find'][$links_callback_counter];
-		}, $body);
-
-		$find = array();
-		foreach ($context['tags_list']['tags'] as $tag)
-			$find[] = '~(\s|<br />|^)#(' . preg_quote($tag['tag_text'], '~') . ')(\s|<br />|$)~';
-
-		$tmp = preg_replace_callback($find, function ($match) use($id_target, $type)
-		{
-			global $context, $scripturl;
-
-			if (!empty($match[2]) && isset($context['tags_list']['tags'][$match[2]]))
-			{
-				$tag = $context['tags_list']['tags'][$match[2]];
-				return $match[1] . '<a data-target="' . $id_target . '" data-type="' . $type . '" id="tag_' . $tag['id_term'] . '" class="msg_tagsize' . round(10 * $tag['times_used'] / $context['tags_list']['max_used']) . '" href="' . $scripturl . '?action=tags;tag=' . $tag['id_term'] . '.0">#' . $tag['tag_text'] . '</a>' . $match[3];
-			}
-		}, $tmp);
-
-		if (!empty($links_callback))
-			$body = str_replace($links_callback['find'], $links_callback['replace'], $tmp);
-		else
-			$body = $tmp;
-
-		return $body;
-	}
-
 	function cleanPostedTags($tags)
 	{
 		if (empty($tags))
@@ -220,79 +181,6 @@ class Tags_Poster
 
 			return array('tags' => $tags, 'max_used' => $highest_usage);
 		}
-	}
-
-	function mostUsedTags($limit = null)
-	{
-		global $modSettings;
-
-		if (empty($limit))
-			$limit = $modSettings['maximum_number_tags'];
-
-		$db = database();
-
-		$request = $db->query('', '
-			SELECT id_term, tag_text, times_used
-			FROM {db_prefix}tag_terms
-			WHERE times_used > 0
-			ORDER BY times_used DESC
-			LIMIT {int:maximum}',
-			array(
-				'maximum' => $limit
-			)
-		);
-		$tags = array();
-		$highest_usage = 1;
-		while ($row = $db->fetch_assoc($request))
-		{
-			$highest_usage = max($highest_usage, $row['times_used']);
-			$tags[$row['tag_text']] = $row;
-		}
-		$db->free_result($request);
-
-		ksort($tags);
-
-		return array('tags' => $tags, 'max_used' => $highest_usage);
-	}
-
-	function tagDetails($tag_id)
-	{
-		$db = database();
-
-		$request = $db->query('', '
-			SELECT id_term, tag_text
-			FROM {db_prefix}tag_terms
-			WHERE id_term = {int:tag_id}',
-			array(
-				'tag_id' => $tag_id,
-			)
-		);
-
-		$tag_details = $db->fetch_assoc($request);
-		$db->free_result($request);
-
-		return $tag_details;
-	}
-
-	function getTagsIdByName($tags)
-	{
-		$db = database();
-
-		$request = $db->query('', '
-			SELECT id_term
-			FROM {db_prefix}tag_terms
-			WHERE tag_text IN ({array_string:tags})',
-			array(
-				'tags' => $tags,
-			)
-		);
-
-		$tags_id = array();
-		while ($row = $db->fetch_assoc($request))
-			$tags_id[] = $row['id_term'];
-		$db->free_result($request);
-
-		return $tags_id;
 	}
 
 	function addTags($id_target, $tag_ids)
@@ -466,7 +354,7 @@ class Tags_Poster
 				)
 			);
 
-			$tag = $this->tagDetails($tag_id);
+			$tag = $this->_info->tagDetails($tag_id);
 			if (empty($tag))
 				return false;
 
@@ -492,7 +380,7 @@ class Tags_Poster
 				)
 			);
 
-			$tag = $this->tagDetails($tag_id);
+			$tag = $this->_info->tagDetails($tag_id);
 			if (empty($tag))
 				return false;
 
@@ -588,26 +476,6 @@ class Tags_Poster
 			array(
 				'current_tag' => $tag_id,
 				'tagger' => $this->id_tagger,
-			)
-		);
-		list ($count) = $db->fetch_row($request);
-		$db->free_result($request);
-
-		return $count;
-	}
-
-	function countTag($tag_id)
-	{
-		$db = database();
-
-		// @todo this should become a column in the tag_terms table, but since it implies also moderation, I'll do it later
-		$request = $db->query('', '
-			SELECT SUM(times_used)
-			FROM {db_prefix}tag_terms as tt
-				LEFT JOIN {db_prefix}tag_relation as tr ON (tt.id_term = tr.id_term)
-			WHERE tr.id_target = {int:current_tag}',
-			array(
-				'current_tag' => $tag_id,
 			)
 		);
 		list ($count) = $db->fetch_row($request);
