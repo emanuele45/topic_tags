@@ -17,6 +17,8 @@ if (!defined('ELK'))
  *********************************************************/
 class Tags_Integrate
 {
+	protected $styler = null;
+
 	protected static function init($perm = false)
 	{
 		global $modSettings, $context;
@@ -29,6 +31,7 @@ class Tags_Integrate
 		if ($perm && !tagsAllowed(true))
 			return false;
 
+		loadLanguage('Tags');
 		if (!isset($context['tags']))
 			$context['tags'] = array();
 
@@ -81,15 +84,15 @@ class Tags_Integrate
 			return;
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		self::$poster = new Tags_Poster('topic');
-		$current_tags = self::$poster->getTargetTags($topicinfo['id_topic'], true);
+		$poster = new Tags_Poster('topic');
+		$current_tags = $poster->getTargetTags($topicinfo['id_topic'], true);
 
 		if (empty($current_tags))
 			return;
 
 		if (!empty($modSettings['hashtag_mode']))
 		{
-			add_integration_function('integrate_display_topic', 'Tags_Integrate::display_topic', false, false);
+			add_integration_function('integrate_prepare_display_context', 'Tags_Integrate::prepare_display_context', false, false);
 		}
 
 		require_once(SUBSDIR . '/TagsStyler.class.php');

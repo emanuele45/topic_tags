@@ -68,11 +68,6 @@ $hooks = array(
 		'SOURCEDIR/Tags.integrate.php',
 	),
 	array(
-		'integrate_prepare_display_context',
-		'Tags_Integrate::prepare_display_context',
-		'SOURCEDIR/Tags.integrate.php',
-	),
-	array(
 		'integrate_remove_message',
 		'Tags_Integrate::remove_message',
 		'SOURCEDIR/Tags.integrate.php',

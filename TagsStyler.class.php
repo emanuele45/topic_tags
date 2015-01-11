@@ -56,7 +56,7 @@ class Tags_Styler
 		}
 	}
 
-	function genericCloud($title)
+	function genericCloud($title = null)
 	{
 		global $modSettings, $context;
 
@@ -118,14 +118,16 @@ class Tags_Styler
 		foreach ($this->_tagList['tags'] as $tag)
 			$find[] = '~(\s|<br />|^)#(' . preg_quote($tag['tag_text'], '~') . ')(\s|<br />|$)~';
 
-		$tmp = preg_replace_callback($find, function ($match) use($data, $this)
+		$tags = $this->_tagList;['tags'];
+		$max_used = $this->_tagList['max_used'];
+		$tmp = preg_replace_callback($find, function ($match) use($data, $tags, $max_used)
 		{
 			global $scripturl;
 
-			if (!empty($match[2]) && isset($this->_tagList['tags'][$match[2]]))
+			if (!empty($match[2]) && isset($tags[$match[2]]))
 			{
-				$tag = $this->_tagList['tags'][$match[2]];
-				return $match[1] . '<a ' . $data . ' id="tag_' . $tag['id_term'] . '" class="msg_tagsize' . round(10 * $tag['times_used'] / $this->_tagList['max_used']) . '" href="' . $scripturl . '?action=tags;tag=' . $tag['id_term'] . '.0">#' . $tag['tag_text'] . '</a>' . $match[3];
+				$tag = $tags[$match[2]];
+				return $match[1] . '<a ' . $data . ' id="tag_' . $tag['id_term'] . '" class="msg_tagsize' . round(10 * $tag['times_used'] / $max_used) . '" href="' . $scripturl . '?action=tags;tag=' . $tag['id_term'] . '.0">#' . $tag['tag_text'] . '</a>' . $match[3];
 			}
 		}, $tmp);
 
