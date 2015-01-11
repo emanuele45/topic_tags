@@ -37,12 +37,27 @@ class Tags_Integrate
 
 	public static function post_after()
 	{
+		global $modSettings, $topic, $context, $txt;
+
 		if (!self::init(true))
 			return;
 
-		require_once(SUBSDIR . '/TagsStyler.class.php');
-		$styler = new Tags_Styler();
-		$styler->tags_postPage();
+		// Give the box only for new topics or when editing the first message
+		if (empty($modSettings['hashtag_mode']) && (empty($topic) || $context['is_first_post']))
+		{
+			require_once(SUBSDIR . '/TagsStyler.class.php');
+			$poster = new Tags_Poster('topics');
+			$context['current_tags'] = $poster->getTargetTags($topic, true);
+
+			$styler = new Tags_Styler($context['current_tags']);
+			$styler->setTarget('topics', $topic);
+			$styler->setTexts(array(
+				'want_to_restore_tags' => $txt['want_to_restore_topic_tags'],
+				'tags_will_be_deleted' => $txt['topic_tags_will_be_deleted']
+			));
+
+			$styler->postForm('postarea', array('add' => $poster->canAccess($topic) && tagsAllowed()));
+		}
 	}
 
 	public static function mark_read_button()
@@ -50,31 +65,37 @@ class Tags_Integrate
 		if (!self::init())
 			return;
 
-		
+		require_once(SUBSDIR . '/TagsInfo.class.php');
+		$info = new Tags_Info();
+
 		require_once(SUBSDIR . '/TagsStyler.class.php');
-		$styler = new Tags_Styler();
-		$styler->tags_BICloud();
+		$styler = new Tags_Styler($info->mostUsedTags());
+		$styler->genericCloud();
 	}
 
 	public static function display_topic($topicinfo)
 	{
-		global $txt, ;
+		global $txt, $modSettings;
 
 		if (!self::init())
 			return;
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		self::$poster = new Tags_Poster();
+		self::$poster = new Tags_Poster('topic');
+		$current_tags = self::$poster->getTargetTags($topicinfo['id_topic'], true);
+
+		if (empty($current_tags))
+			return;
 
 		if (!empty($modSettings['hashtag_mode']))
 		{
 			add_integration_function('integrate_display_topic', 'Tags_Integrate::display_topic', false, false);
-			$context['current_tags'] = self::$poster->getTargetTags($topic, true);
 		}
 
 		require_once(SUBSDIR . '/TagsStyler.class.php');
-		self::$styler = new Tags_Styler();
-		self::$styler->displayTargetCloud('topics', $topicinfo['id_topic'], 'pages_and_buttons', $txt['this_topic_tags']);
+		self::$styler = new Tags_Styler($current_tags);
+		self::$styler->setTarget('topics', $topicinfo['id_topic']);
+		self::$styler->displayCloud('pages_and_buttons', $txt['this_topic_tags']);
 	}
 
 	public static function load_permissions(&$permissionGroups, &$permissionList, &$leftPermissionGroups, &$hiddenPermissions, &$relabelPermissions)
@@ -225,16 +246,7 @@ class Tags_Integrate
 
 	public static function prepare_display_context(&$output, &$message)
 	{
-		global $modSettings, $context, $topic;
-
-		$context['current_tags'] = $poster->getTargetTags($topic, true);
-		if (empty($context['current_tags']))
-			return;
-
-		require_once(SUBSDIR . '/TagsStyler.class.php');
-		$styler = new Tags_Styler();
-
-		$output['body'] = $styler->createHashLinks($output['body'], $topic);
+		$output['body'] = self::$styler->createHashLinks($output['body']);
 	}
 
 	public static function remove_message($message)

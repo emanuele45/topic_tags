@@ -26,7 +26,6 @@ class Tags_Controller extends Action_Controller
 	private $_messages_per_page = null;
 	private $_sort_method = null;
 	private $_poster = null;
-	private $_styler = null;
 
 	/**
 	 * Entry point function for tags, permission checks, just makes sure its on
@@ -47,7 +46,6 @@ class Tags_Controller extends Action_Controller
 		require_once(SUBSDIR . '/Tags.subs.php');
 
 		$this->_poster = new Tags_Poster('topics');
-		$this->_styler = new Tags_Styler();
 
 		if (strpos($_REQUEST['tag'], '.') !== false)
 			list ($this->_id, ) = explode('.', $_REQUEST['tag']);

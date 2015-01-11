@@ -23,7 +23,6 @@ class Tagsapi_Controller extends Action_Controller
 	private $_id = null;
 	private $_name = null;
 	private $_poster = null;
-	private $_styler = null;
 
 	/**
 	 * Entry point function for tags, permission checks, just makes sure its on
@@ -33,7 +32,6 @@ class Tagsapi_Controller extends Action_Controller
 		global $modSettings;
 
 		require_once(SUBSDIR . '/TagsPoster.class.php');
-		require_once(SUBSDIR . '/TagsStyler.class.php');
 
 		loadLanguage('Tags');
 
@@ -43,7 +41,6 @@ class Tagsapi_Controller extends Action_Controller
 
 		$type = isset($_REQUEST['type']) ? $_REQUEST['type'] : '';
 		$this->_poster = new Tags_Poster($type);
-		$this->_styler = new Tags_Styler();
 
 		$this->_id = isset($_REQUEST['target']) ? (int) $_REQUEST['target'] : 0;
 
@@ -93,7 +90,7 @@ class Tagsapi_Controller extends Action_Controller
 
 	public function action_add_api()
 	{
-		global $context, $txt, $topic;
+		global $context, $txt, $topic, $modSettings;
 
 		$context['sub_template'] = 'tags_action_add';
 
@@ -117,12 +114,15 @@ class Tagsapi_Controller extends Action_Controller
 
 		$tags = $this->_poster->createTags($tags_text);
 		$this->_poster->addTags($topic, $tags);
-		$context['xml_data'] = $this->_styler->prepareXmlTags($this->_poster->getTargetTags($topic));
+
+		require_once(SUBSDIR . '/TagsStyler.class.php');
+		$styler = new Tags_Styler($this->_poster->getTargetTags($topic));
+		$context['xml_data'] = $styler->prepareXmlTags();
 	}
 
 	public function action_search_api()
 	{
-		global $context, $txt, $topic;
+		global $context;
 
 		if (!empty($_GET['search']))
 			$search = trim(Util::htmlspecialchars($_GET['search']));

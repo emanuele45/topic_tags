@@ -13,68 +13,98 @@ if (!defined('ELK'))
 
 class Tags_Styler
 {
-	function tags_postPage()
+	protected $_tagList = array();
+	protected $_target = null;
+
+	public function __construct($tags_list = null)
 	{
-		global $modSettings, $topic, $context, $txt;
+		$this->_tagList = $tags_list;
+	}
 
-		// Give the box only for new topics or when editing the first message
-		if (empty($modSettings['hashtag_mode']) && (empty($topic) || $context['is_first_post']))
+	function postForm($where, $permissions = array())
+	{
+		Template_Layers::getInstance()->addAfter('tags_posting', $where);
+		$this->init_tags_template(false, $permissions);
+
+		loadJavaScriptFile('suggest.js');
+
+		if (!empty($this->_tagList))
 		{
-			Template_Layers::getInstance()->addAfter('tags_posting', 'postarea');
-			$this->init_tags_template();
+			addJavascriptVar('current_tags', 'var current_tags = new Array(' . implode(', ', $this->_tagList) . ');', true);
+			addJavascriptVar('want_to_restore_tags', $this->_txt('want_to_restore_tags'), true);
+			addJavascriptVar('tags_will_be_deleted', $this->_txt('tags_will_be_deleted'), true);
+		}
 
-			loadJavaScriptFile('suggest.js');
-			require_once(SUBSDIR . '/TagsPoster.class.php');
-			$poster = new Tags_Poster('topics');
+		addJavascriptVar('autosuggest_delete_item', $this->_txt('autosuggest_delete_item'), true);
+	}
 
-			$context['current_tags'] = $poster->getTargetTags($topic, true);
-			if (!empty($context['current_tags']))
-			{
-				addJavascriptVar('current_tags', 'var current_tags = new Array(' . implode(', ', $context['current_tags']) . ');', true);
-				addJavascriptVar('want_to_restore_tags', $txt['want_to_restore_tags'], true);
-				addJavascriptVar('tags_will_be_deleted', $txt['tags_will_be_deleted'], true);
-			}
+	protected function _txt($index)
+	{
+		global $txt;
 
-			addJavascriptVar('autosuggest_delete_item', $txt['autosuggest_delete_item'], true);
+		if (isset($this->_strings[$index]))
+			return $this->_strings[$index];
+		else
+			return $txt[$index];
+	}
+
+	public function setTexts($strings)
+	{
+		foreach ($strings as $key => $val)
+		{
+			$this->_strings[$key] = $val;
 		}
 	}
 
-	function tags_BICloud()
+	function genericCloud($title)
 	{
-		global $modSettings;
+		global $modSettings, $context;
+
+		$this->setCloudTitle($title);
 
 		$this->init_tags_template(!empty($modSettings['hashtag_mode']));
-		Template_Layers::getInstance()->addEnd('boardindex_tag_cloud');
+		Template_Layers::getInstance()->addEnd('generic_tag_cloud');
 
-		require_once(SUBSDIR . '/TagsInfo.class.php');
-		$info = new Tags_Info();
-		$this->styleTags($info->mostUsedTags());
+		$context['current_tags'] = $this->styleTags($this->_tagList);
 	}
 
-	function displayTargetCloud($type, $target, $where, $title)
+	protected function setCloudTitle($title)
 	{
-			global $modSettings, $context;
+		global $context, $txt;
 
-			$this->init_tags_template(!empty($modSettings['hashtag_mode']));
-			Template_Layers::getInstance()->addBefore('tag_cloud', $where);
-
+		if ($title !== null)
 			$context['tags']['cloud_title'] = $title;
-
-			require_once(SUBSDIR . '/TagsPoster.class.php');
-			$poster = new Tags_Poster($type);
-			$context['tags_list'] = $poster->getTargetTags($target);
-			$this->styleTags($context['tags_list'], $target);
+		else
+			$context['tags']['cloud_title'] = $txt['most_frequent_tags'];
 	}
 
-	public function createHashLinks($body, $id_target)
+	function displayCloud($where, $title)
 	{
-		global $context;
+		global $modSettings, $context;
 
+		$this->init_tags_template(!empty($modSettings['hashtag_mode']));
+		Template_Layers::getInstance()->addBefore('tag_cloud', $where);
+
+		$this->setCloudTitle($title);
+
+		$context['current_tags'] = $this->styleTags($this->_tagList, $this->_target);
+	}
+
+	public function setTarget($target_type = null, $target = null)
+	{
+		$this->_target = $target;
+		$this->_target_type = $target_type;
+	}
+
+	public function createHashLinks($body)
+	{
 		// Protects hashes into links to avoid broken HTML
 		// ...it would be cool to have hashes linked even inside links though...
 		$links_callback_counter = 0;
 		$links_callback = array();
-		$type = $this->tagger_name;
+
+		$data = $this->_target !== null ? 'data-target="' . (int) $this->_target . '"' : '';
+		$data = $this->_target_type !== null ? 'data-type="' . $this->_target_type . '"' : '';
 
 		$tmp = preg_replace_callback('~(<a[^>]*>[^<]*<\/a>)~', function ($match) use (&$links_callback, &$links_callback_counter)
 		{
@@ -85,17 +115,17 @@ class Tags_Styler
 		}, $body);
 
 		$find = array();
-		foreach ($context['tags_list']['tags'] as $tag)
+		foreach ($this->_tagList['tags'] as $tag)
 			$find[] = '~(\s|<br />|^)#(' . preg_quote($tag['tag_text'], '~') . ')(\s|<br />|$)~';
 
-		$tmp = preg_replace_callback($find, function ($match) use($id_target, $type)
+		$tmp = preg_replace_callback($find, function ($match) use($data, $this)
 		{
-			global $context, $scripturl;
+			global $scripturl;
 
-			if (!empty($match[2]) && isset($context['tags_list']['tags'][$match[2]]))
+			if (!empty($match[2]) && isset($this->_tagList['tags'][$match[2]]))
 			{
-				$tag = $context['tags_list']['tags'][$match[2]];
-				return $match[1] . '<a data-target="' . $id_target . '" data-type="' . $type . '" id="tag_' . $tag['id_term'] . '" class="msg_tagsize' . round(10 * $tag['times_used'] / $context['tags_list']['max_used']) . '" href="' . $scripturl . '?action=tags;tag=' . $tag['id_term'] . '.0">#' . $tag['tag_text'] . '</a>' . $match[3];
+				$tag = $this->_tagList['tags'][$match[2]];
+				return $match[1] . '<a ' . $data . ' id="tag_' . $tag['id_term'] . '" class="msg_tagsize' . round(10 * $tag['times_used'] / $this->_tagList['max_used']) . '" href="' . $scripturl . '?action=tags;tag=' . $tag['id_term'] . '.0">#' . $tag['tag_text'] . '</a>' . $match[3];
 			}
 		}, $tmp);
 
@@ -107,10 +137,8 @@ class Tags_Styler
 		return $body;
 	}
 
-	function init_tags_template($minimal = false)
+	function init_tags_template($minimal = false, $permissions = array())
 	{
-		global $txt, $topic;
-
 		loadCSSFile('tags.css');
 		loadLanguage('Tags');
 		loadTemplate('Tags');
@@ -121,30 +149,41 @@ class Tags_Styler
 
 		loadJavaScriptFile('tags.js');
 
+		if (isset($permissions['add']))
+			$add = (int) !empty($permissions['add']);
+		else
+			$add = tagsAllowed();
+
 		addJavascriptVar('tags_allowed_delete', (int) tagsAllowed());
-		addJavascriptVar('tags_allowed_add', (int) (!empty($topic) && tagsAllowed()));
-		addJavascriptVar('tags_generic_save', $txt['save'], true);
-		addJavascriptVar('tags_generic_cancel', $txt['modify_cancel'], true);
-		addJavascriptVar('tags_generic_ajax_error', $txt['tags_generic_ajax_error'], true);
-		addJavascriptVar('tags_generic_backend_error', $txt['tags_generic_backend_error'], true);
+		addJavascriptVar('tags_allowed_add', $add);
+		addJavascriptVar('tags_generic_save', $this->_txt('save'), true);
+		addJavascriptVar('tags_generic_cancel', $this->_txt('modify_cancel'), true);
+		addJavascriptVar('tags_generic_ajax_error', $this->_txt('tags_generic_ajax_error'), true);
+		addJavascriptVar('tags_generic_backend_error', $this->_txt('tags_generic_backend_error'), true);
 	}
 
 	function styleTags($tags, $id_target = false)
 	{
-		global $context, $scripturl;
+		global $scripturl;
 
-		$context['current_tags'] = array();
-		foreach ($tags['tags'] as $tag)
-			$context['current_tags'][$tag['id_term']] = '<a' . ($id_target !== false ? ' data-target="' . $id_target . '"': '') . ' id="tag_' . $tag['id_term'] . '" class="tagsize' . round(10 * $tag['times_used'] / $tags['max_used']) . '" href="' . $scripturl . '?action=tags;tag=' . $tag['id_term'] . '.0">' . $tag['tag_text'] . '</a>';
-	}
+		$current_tags = array();
+		$data = $id_target !== false ? ' data-target="' . $id_target . '"': '';
 
-	function prepareXmlTags($tags)
-	{
-		$xml_data['result'] = array();
 		foreach ($tags['tags'] as $tag)
 		{
+			$current_tags[$tag['id_term']] = '<a' . $data . ' id="tag_' . $tag['id_term'] . '" class="tagsize' . round(10 * $tag['times_used'] / $tags['max_used']) . '" href="' . $scripturl . '?action=tags;tag=' . $tag['id_term'] . '.0">' . $tag['tag_text'] . '</a>';
+		}
+
+		return $current_tags;
+	}
+
+	function prepareXmlTags()
+	{
+		$xml_data['result'] = array();
+		foreach ($this->_tagList['tags'] as $tag)
+		{
 			$xml_data['result'][$tag['id_term']] = array(
-				'tagsize' => round(10 * $tag['times_used'] / $tags['max_used']),
+				'tagsize' => round(10 * $tag['times_used'] / $this->_tagList['max_used']),
 				'text' => $tag['tag_text']
 			);
 		}

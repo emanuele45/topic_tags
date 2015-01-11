@@ -11,9 +11,13 @@
 $txt['tags'] = 'Tags';
 $txt['this_topic_tags'] = 'This topic\'s tags';
 $txt['most_frequent_tags'] = 'Most frequently used tags';
-$txt['tags_will_be_deleted'] = 'If you save the message now all the tags will be deleted';
 $txt['restore_tags'] = 'Restore tags';
-$txt['want_to_restore_tags'] = 'Are you sure you want to restore di original tags of this topic?';
+
+$txt['tags_will_be_deleted'] = 'If you save now all the tags will be deleted';
+$txt['want_to_restore_tags'] = 'Are you sure you want to restore di original tags?';
+
+$txt['topic_tags_will_be_deleted'] = 'If you save the message now all the tags will be deleted';
+$txt['want_to_restore_topic_tags'] = 'Are you sure you want to restore di original tags of this topic?';
 
 $txt['no_such_tag'] = 'Sorry, this tag doesn\'t exist';
 $txt['empty_tag'] = 'Sorry, it\'s not possible to add an empty tag...';

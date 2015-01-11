@@ -34,32 +34,30 @@ function template_tag_cloud_above()
 	template_create_tag_cloud();
 }
 
-function template_boardindex_tag_cloud_above()
+function template_generic_tag_cloud_above()
 {
-	template_create_tag_cloud('most_frequent_tags');
+	template_create_tag_cloud();
 }
 
-function template_create_tag_cloud($text = null)
+function template_create_tag_cloud()
 {
 	global $context, $txt, $settings, $options;
 
-	if (!empty($context['current_tags']))
-	{
-		// @todo cleaup the title at some point
-		echo '
+	// @todo cleaup the title at some point
+	echo '
 		<div class="cat_bar">
 			<h3 class="catbg">
-				', (empty($text) ? (empty($context['tags']['cloud_title']) ? $txt['tags'] : $context['tags']['cloud_title']) : $txt[$text]), '
-			<img id="tagsupshrink" src="', $settings['images_url'], '/collapse.png" alt="*" title="', $txt['hide'], '" style="vertical-align: bottom; cursor: pointer;"/>
+				', $context['tags']['cloud_title'], '
+				<img id="tagsupshrink" src="', $settings['images_url'], '/collapse.png" alt="*" title="', $txt['hide'], '" style="vertical-align: bottom; cursor: pointer;"/>
 			</h3>
 		</div>
 		<div ', !empty($context['current_topic']) ? 'data-topic="' . $context['current_topic'] . '"' : '', 'id="show_tags" class="', empty($options['collapse_tags_cloud']) ? '' : 'tags_hidden ', 'roundframe">
 			', template_tag_cloud(), '
 		</div>';
 
-		addInlineJavascript('
+	addInlineJavascript('
 		// Create the tags toggle.
-		var smfTagCloudToggle = new smc_Toggle({
+		var elkTagCloudToggle = new smc_Toggle({
 			bToggleEnabled: true,
 			bCurrentlyCollapsed: ' . (empty($options['collapse_tags_cloud']) ? 'false' : 'true') . ',
 			aSwappableContainers: [
@@ -85,7 +83,6 @@ function template_create_tag_cloud($text = null)
 				sCookieName: \'tagsupshrink\'
 			}
 		});', true);
-	}
 }
 
 function template_tags_action_add()

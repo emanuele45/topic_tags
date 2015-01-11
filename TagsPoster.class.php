@@ -21,6 +21,7 @@ class Tags_Poster
 		$this->initTagger($action);
 		$this->id_tagger = $this->tagger->getTypeId();
 		$this->tagger_name = $action;
+
 		require_once(SUBSDIR . '/TagsInfo.class.php');
 		$this->_info = new Tags_Info();
 	}
